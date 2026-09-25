@@ -1,0 +1,47 @@
+{
+  "badges": [
+    { "label": "Framer Certified Expert", "icon": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/666958c16806a97d16df5eba_framer.svg" },
+    { "label": "Webflow Certified Expert", "icon": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/670f380b8bc01fb1af5b8feb_webflow-badge.svg" }
+  ],
+  "heading": "Premium Templates for Framer, Webflow, and Bootstrap",
+  "description": "Explore ready-to-use website templates built for speed, clarity, and real-world use cases. Clean structure, polished design, and easy customization so you can launch faster with confidence.",
+  "ctas": [
+    { "text": "Browse Templates", "href": "https://www.webestica.com/#demo", "style": "primary" },
+    { "text": "All Access", "href": "https://www.webestica.com/webflow-all-access", "style": "secondary", "icon": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/6706589ec8bb101d53a7bbed_webflow-icon-w.svg" }
+  ],
+  "stats": [
+    {
+      "value": "35K+",
+      "label": "downloads",
+      "description": "Used by founders, teams, and agencies worldwide",
+      "icon": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/6423ac0b98e25ffe2b30e115_star-fill.svg"
+    },
+    {
+      "value": "4.9/5.0",
+      "label": "rating",
+      "description": "Highly rated for design quality and usability"
+    }
+  ],
+  "showcaseImages": [
+    { "alt": "Homepage preview of a clean consultancy website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57ee03fb972b78d363b_demo-17.webp" },
+    { "alt": "Homepage preview of a high converting SaaS product website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57e222378659158b8b5_demo-18.webp" },
+    { "alt": "Homepage preview of a technology and software company website template", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57ee192775232e0c147_demo-19.webp" },
+    { "alt": "Homepage preview of a creative SaaS website template with modern layout", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57e845d566e2783cc7f_287e102e95f4fba688bc2df2214b0d16_demo-20.webp" },
+    { "alt": "Homepage preview of a bold digital agency website template for professional teams", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57c65300b39ac39faa6_demo-16.webp" },
+    { "alt": "Homepage preview of a creative SaaS website template for modern products", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57cfdce4cf11f7598e5_demo-15.webp" },
+    { "alt": "Homepage preview of a transport and logistics services website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57cc2d2f4ff06196eef_demo-14.webp" },
+    { "alt": "Homepage preview of a finance and accounting business website template", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57ce8c01f7b17d350bf_demo-13.webp" },
+    { "alt": "Homepage preview of a SaaS product website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57ab02dacc44dac9920_demo-11.webp" },
+    { "alt": "Homepage preview of a creative agency website template with bold visual design", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57a2b4bc7cb77de2853_demo-9.webp" },
+    { "alt": "Homepage preview of a B2B SaaS consulting website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57a26adb430e88e4230_demo-12.webp" },
+    { "alt": "Homepage preview of a one page agency website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57adcbffd4d1395204c_demo-10.webp" },
+    { "alt": "Homepage preview of a digital health startup website template built for Webflow", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de5776f91b2a83fc38385_demo-7.webp" },
+    { "alt": "Homepage preview of a bold creative agency website template with strong typography", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de577102c09c2ccd0cf47_demo-8.webp" },
+    { "alt": "Homepage preview of a blog and magazine website template with editorial layout", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de5770425395abb88e783_demo-6.webp" },
+    { "alt": "Homepage preview of an industrial manufacturing website template with structured sections", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de5772febabe212a27c29_demo-5.webp" },
+    { "alt": "Webflow Website Template for AI Consulting Agency homepage preview", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57607996bd4425e665f_demo-3.webp" },
+    { "alt": "Homepage preview of an AI and technology website template", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de576942b31b34014f626_demo-4.webp" },
+    { "alt": "Homepage preview of AI automation agency webflow template", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57690f14fbe357af398_demo-1.webp" },
+    { "alt": "Homepage preview of a mobile app website template built for Framer", "src": "https://cdn.prod.website-files.com/6333c43995273d509e9a2a16/695de57682dad26602a0218e_demo-2.webp" }
+  ]
+}

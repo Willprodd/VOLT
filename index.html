@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOLT soluciones digitales | Software, webs y apps para pymes</title>
+  <meta name="description" content="VOLT soluciones digitales diseña y desarrolla software, páginas web y apps a la medida para pymes en Bogotá, Tocaima, Girardot y toda Colombia.">
+  <meta name="theme-color" content="#10101B">
+  <meta name="color-scheme" content="dark">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="VOLT soluciones digitales">
+  <meta property="og:description" content="Software, webs y apps a la medida para pymes en Colombia.">
+  <meta property="og:image" content="img/volt-logo.png">
+  <meta property="og:locale" content="es_CO">
+
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Michroma&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <script>document.documentElement.classList.add('js');</script>
+  <script src="js/main.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+  <span class="top-sentinel" aria-hidden="true"></span>
+
+  <!-- ============ NAVEGACIÓN ============ -->
+  <header class="nav" id="nav">
+    <div class="container nav__inner">
+      <a class="nav__brand" href="#inicio" aria-label="VOLT soluciones digitales, ir al inicio">
+        <img src="img/volt-wordmark.png" alt="VOLT" width="480" height="108">
+      </a>
+
+      <nav class="nav__links" aria-label="Principal">
+        <a href="#servicios">Servicios</a>
+        <a href="#proceso">Proceso</a>
+        <a href="#proyectos">Proyectos</a>
+        <a href="#nosotros">Nosotros</a>
+        <a href="#preguntas">Preguntas</a>
+      </nav>
+
+      <a class="btn btn--primary btn--sm nav__cta" href="#contacto">Cotiza tu proyecto</a>
+
+      <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu-movil" aria-label="Abrir menú">
+        <i class="ph ph-list" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="mobile-menu" id="menu-movil" hidden>
+      <nav class="container mobile-menu__inner" aria-label="Menú móvil">
+        <a href="#servicios">Servicios</a>
+        <a href="#proceso">Proceso</a>
+        <a href="#proyectos">Proyectos</a>
+        <a href="#nosotros">Nosotros</a>
+        <a href="#preguntas">Preguntas</a>
+        <a class="btn btn--primary" href="#contacto">Cotiza tu proyecto</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ HERO (estructura de "plantilla hero.json") ============ -->
+    <section class="hero" id="inicio" aria-labelledby="hero-title">
+      <div class="hero__glow" aria-hidden="true"></div>
+
+      <div class="container hero__grid">
+        <div class="hero__content">
+          <!-- badges -->
+          <ul class="hero__badges" data-anim style="--i:0">
+            <li class="badge"><i class="ph ph-code" aria-hidden="true"></i>Desarrollo a la medida</li>
+            <li class="badge"><i class="ph ph-storefront" aria-hidden="true"></i>Hecho para pymes</li>
+          </ul>
+
+          <!-- heading -->
+          <h1 class="hero__title" id="hero-title" data-anim style="--i:1">
+            Tecnología que <span class="accent">impulsa</span> tu pyme
+          </h1>
+
+          <!-- description -->
+          <p class="hero__lead" data-anim style="--i:2">
+            Diseñamos y desarrollamos software, webs y apps a la medida de tu negocio. Claro, rápido y con soporte cercano.
+          </p>
+
+          <!-- ctas -->
+          <div class="hero__ctas" data-anim style="--i:3">
+            <a class="btn btn--primary" href="#contacto">
+              Cotiza tu proyecto
+              <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </a>
+            <a class="btn btn--secondary" href="#proyectos">
+              <i class="ph ph-squares-four" aria-hidden="true"></i>
+              Ver proyectos
+            </a>
+          </div>
+
+          <!-- stats: datos de ejemplo, reemplazar por cifras reales de VOLT -->
+          <dl class="hero__stats" data-anim style="--i:4">
+            <div class="stat">
+              <dt class="stat__head">
+                <i class="ph ph-lightning stat__icon" aria-hidden="true"></i>
+                <span class="stat__value" data-count="40" data-suffix="+">40+</span>
+                <span class="stat__label">proyectos</span>
+              </dt>
+              <dd class="stat__desc">Webs, apps y sistemas entregados a negocios colombianos</dd>
+            </div>
+            <div class="stat">
+              <dt class="stat__head">
+                <i class="ph ph-star stat__icon" aria-hidden="true"></i>
+                <span class="stat__value" data-count="4.9" data-decimals="1" data-suffix="/5">4.9/5</span>
+                <span class="stat__label">calificación</span>
+              </dt>
+              <dd class="stat__desc">Promedio de satisfacción de nuestros clientes</dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- showcaseImages: columnas en movimiento continuo -->
+        <div class="showcase" aria-label="Galería de trabajos de VOLT" role="region">
+          <div class="showcase__inner">
+            <div class="showcase__col">
+              <div class="showcase__track">
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=480&h=600&q=70" alt="Dueña de un negocio registrando una venta en una tablet" width="480" height="600" fetchpriority="high"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=480&h=600&q=70" alt="Portátil con un panel de analítica de ventas" width="480" height="600"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1587440871875-191322ee64b0?auto=format&fit=crop&w=480&h=600&q=70" alt="Bocetos de pantallas de una app sobre una mesa de trabajo" width="480" height="600" loading="lazy"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=480&h=600&q=70" alt="Equipo celebrando la entrega de un proyecto" width="480" height="600" loading="lazy"></figure>
+              </div>
+            </div>
+            <div class="showcase__col showcase__col--reverse">
+              <div class="showcase__track">
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=480&h=600&q=70" alt="Ingeniera revisando servidores en un centro de datos" width="480" height="600" fetchpriority="high"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=480&h=600&q=70" alt="Dos desarrolladores revisando código en un portátil" width="480" height="600"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=480&h=600&q=70" alt="Código fuente en la pantalla de un portátil" width="480" height="600" loading="lazy"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=480&h=600&q=70" alt="Sesión de planeación con notas adhesivas en la pared" width="480" height="600" loading="lazy"></figure>
+              </div>
+            </div>
+            <div class="showcase__col showcase__col--slow">
+              <div class="showcase__track">
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=480&h=600&q=70" alt="Cliente pagando con el celular en un comercio" width="480" height="600" fetchpriority="high"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=480&h=600&q=70" alt="Desarrolladores trabajando en sus escritorios" width="480" height="600"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&h=600&q=70" alt="Primer plano de código en un editor oscuro" width="480" height="600" loading="lazy"></figure>
+                <figure class="shot"><img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=480&h=600&q=70" alt="Vista cenital de un equipo trabajando con portátiles" width="480" height="600" loading="lazy"></figure>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SERVICIOS (bento) ============ -->
+    <section class="section" id="servicios" aria-labelledby="servicios-title">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2 id="servicios-title">Todo lo digital que tu negocio necesita</h2>
+          <p>Un solo equipo para tu web, tu app y los sistemas que usas cada día.</p>
+        </header>
+
+        <div class="bento">
+          <article class="card cell cell--web reveal" style="--i:0">
+            <div class="cell__body">
+              <span class="cell__icon"><i class="ph ph-browser" aria-hidden="true"></i></span>
+              <h3>Páginas web y tiendas en línea</h3>
+              <p>Sitios rápidos, fáciles de administrar y listos para vender con pagos en línea.</p>
+              <ul class="tags">
+                <li>Landing pages</li>
+                <li>E-commerce</li>
+                <li>SEO</li>
+              </ul>
+            </div>
+            <div class="cell__media">
+              <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=800&h=700&q=70" alt="Persona revisando una página web en el portátil y el celular" width="800" height="700" loading="lazy">
+            </div>
+          </article>
+
+          <article class="card cell cell--apps reveal" style="--i:1">
+            <div class="cell__body">
+              <span class="cell__icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></span>
+              <h3>Apps móviles</h3>
+              <p>Apps para Android y iPhone que tus clientes sí van a usar.</p>
+            </div>
+            <div class="cell__media cell__media--tall">
+              <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=700&h=800&q=70" alt="Celular con varias aplicaciones en pantalla" width="700" height="800" loading="lazy">
+            </div>
+          </article>
+
+          <article class="card cell cell--custom reveal" style="--i:2">
+            <span class="cell__icon"><i class="ph ph-gear-six" aria-hidden="true"></i></span>
+            <h3>Software a la medida</h3>
+            <p>Inventarios, facturación, citas o CRM, hechos para cómo trabaja tu equipo.</p>
+          </article>
+
+          <article class="card cell cell--auto reveal" style="--i:3">
+            <span class="cell__icon"><i class="ph ph-plugs-connected" aria-hidden="true"></i></span>
+            <h3>Automatización e integraciones</h3>
+            <p>Conectamos WhatsApp, pagos y facturación electrónica para ahorrarte tareas repetidas.</p>
+          </article>
+
+          <article class="card cell cell--support reveal" style="--i:4">
+            <div class="cell__lead">
+              <span class="cell__icon"><i class="ph ph-headset" aria-hidden="true"></i></span>
+              <h3>Soporte y mantenimiento</h3>
+            </div>
+            <p>Después de la entrega seguimos contigo: actualizaciones, copias de seguridad y ajustes cuando los necesites.</p>
+            <ul class="tags">
+              <li>Hosting</li>
+              <li>Copias de seguridad</li>
+              <li>Capacitación</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PROCESO (línea de tiempo) ============ -->
+    <section class="section section--tint" id="proceso" aria-labelledby="proceso-title">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2 id="proceso-title">Así trabajamos contigo</h2>
+          <p>Un proceso corto y transparente. Siempre sabes en qué va tu proyecto.</p>
+        </header>
+
+        <ol class="steps" data-steps>
+          <li class="step reveal" style="--i:0">
+            <span class="step__icon"><i class="ph ph-ear" aria-hidden="true"></i></span>
+            <h3>Escuchamos</h3>
+            <p>Entendemos tu negocio, tus clientes y el problema que quieres resolver.</p>
+          </li>
+          <li class="step reveal" style="--i:1">
+            <span class="step__icon"><i class="ph ph-pencil-ruler" aria-hidden="true"></i></span>
+            <h3>Diseñamos</h3>
+            <p>Te mostramos cómo se verá y funcionará antes de escribir una línea de código.</p>
+          </li>
+          <li class="step reveal" style="--i:2">
+            <span class="step__icon"><i class="ph ph-code" aria-hidden="true"></i></span>
+            <h3>Construimos</h3>
+            <p>Desarrollamos por entregas cortas para que pruebes avances cada semana.</p>
+          </li>
+          <li class="step reveal" style="--i:3">
+            <span class="step__icon"><i class="ph ph-rocket-launch" aria-hidden="true"></i></span>
+            <h3>Acompañamos</h3>
+            <p>Publicamos, capacitamos a tu equipo y seguimos pendientes de que todo funcione.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ PROYECTOS (pestañas) ============ -->
+    <section class="section" id="proyectos" aria-labelledby="proyectos-title">
+      <div class="container">
+        <header class="section-head reveal">
+          <h2 id="proyectos-title">Soluciones para cada tipo de negocio</h2>
+          <p>Ejemplos de lo que construimos para comercios, restaurantes y empresas de servicios.</p>
+        </header>
+
+        <div class="projects reveal">
+          <div class="projects__tabs" role="tablist" aria-label="Tipos de proyecto">
+            <button class="tab" role="tab" id="tab-tienda" aria-controls="panel-tienda" aria-selected="true">
+              <span class="tab__title">Tienda en línea</span>
+              <span class="tab__meta">Comercio de ropa</span>
+            </button>
+            <button class="tab" role="tab" id="tab-pos" aria-controls="panel-pos" aria-selected="false" tabindex="-1">
+              <span class="tab__title">Punto de venta e inventario</span>
+              <span class="tab__meta">Cafetería</span>
+            </button>
+            <button class="tab" role="tab" id="tab-panel" aria-controls="panel-panel" aria-selected="false" tabindex="-1">
+              <span class="tab__title">Panel de indicadores</span>
+              <span class="tab__meta">Distribuidora</span>
+            </button>
+            <button class="tab" role="tab" id="tab-reservas" aria-controls="panel-reservas" aria-selected="false" tabindex="-1">
+              <span class="tab__title">Agenda y reservas</span>
+              <span class="tab__meta">Centro de estética</span>
+            </button>
+          </div>
+
+          <div class="projects__panels">
+            <div class="panel" role="tabpanel" id="panel-tienda" aria-labelledby="tab-tienda" tabindex="0">
+              <div class="panel__media">
+                <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1100&h=700&q=70" alt="Interior de una tienda de ropa con prendas en exhibición" width="1100" height="700" loading="lazy">
+              </div>
+              <div class="panel__text">
+                <p>Catálogo, pagos con PSE y tarjeta, y envíos coordinados desde un solo panel. Tu tienda vende incluso cuando el local está cerrado.</p>
+                <ul class="tags"><li>E-commerce</li><li>Pagos en línea</li><li>Inventario</li></ul>
+              </div>
+            </div>
+
+            <div class="panel" role="tabpanel" id="panel-pos" aria-labelledby="tab-pos" tabindex="0" hidden>
+              <div class="panel__media">
+                <img src="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1100&h=700&q=70" alt="Cajera de una cafetería cobrando con un punto de venta en tablet" width="1100" height="700" loading="lazy">
+              </div>
+              <div class="panel__text">
+                <p>Ventas, inventario y cierre de caja en una tablet. Sabes qué se vende, qué falta y cuánto entró al final del día.</p>
+                <ul class="tags"><li>Punto de venta</li><li>Inventario</li><li>Reportes</li></ul>
+              </div>
+            </div>
+
+            <div class="panel" role="tabpanel" id="panel-panel" aria-labelledby="tab-panel" tabindex="0" hidden>
+              <div class="panel__media">
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1100&h=700&q=70" alt="Pantalla con gráficas de ventas y métricas del negocio" width="1100" height="700" loading="lazy">
+              </div>
+              <div class="panel__text">
+                <p>Tus ventas, gastos y clientes en un tablero que se entiende. Decisiones con datos, sin armar hojas de cálculo cada semana.</p>
+                <ul class="tags"><li>Tableros</li><li>Integraciones</li><li>Automatización</li></ul>
+              </div>
+            </div>
+
+            <div class="panel" role="tabpanel" id="panel-reservas" aria-labelledby="tab-reservas" tabindex="0" hidden>
+              <div class="panel__media">
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1100&h=700&q=70" alt="Clientas revisando una agenda de citas en el portátil" width="1100" height="700" loading="lazy">
+              </div>
+              <div class="panel__text">
+                <p>Tus clientes reservan desde el celular y reciben recordatorios por WhatsApp. Menos citas perdidas y una agenda siempre al día.</p>
+                <ul class="tags"><li>App web</li><li>WhatsApp</li><li>Agenda</li></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NOSOTROS (banda con imagen) ============ -->
+    <section class="band" id="nosotros" aria-labelledby="nosotros-title">
+      <img class="band__img" src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1800&h=1000&q=70" alt="" width="1800" height="1000" loading="lazy">
+      <div class="container band__content">
+        <h2 id="nosotros-title" class="reveal">Tecnología con acento local</h2>
+        <p class="band__statement reveal" style="--i:1">
+          Somos un equipo colombiano con presencia en <strong>Bogotá, Tocaima y Girardot</strong>. Te explicamos todo en español claro y construimos solo lo que tu negocio necesita.
+        </p>
+        <ul class="values">
+          <li class="reveal" style="--i:2">
+            <h3>Cercanía</h3>
+            <p>Hablas directo con quien desarrolla tu proyecto.</p>
+          </li>
+          <li class="reveal" style="--i:3">
+            <h3>Precisión</h3>
+            <p>Alcance, precio y fechas claros desde el inicio.</p>
+          </li>
+          <li class="reveal" style="--i:4">
+            <h3>Claridad</h3>
+            <p>Sin tecnicismos: entiendes cada decisión.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ PREGUNTAS FRECUENTES (acordeón) ============ -->
+    <section class="section" id="preguntas" aria-labelledby="preguntas-title">
+      <div class="container faq">
+        <header class="faq__head reveal">
+          <h2 id="preguntas-title">Preguntas frecuentes</h2>
+          <p>¿Tienes otra duda? <a class="link" href="#contacto">Escríbenos</a> y te respondemos.</p>
+        </header>
+
+        <div class="faq__list reveal" style="--i:1">
+          <div class="faq__item">
+            <h3>
+              <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-1" id="faq-1-q">
+                ¿Cuánto cuesta un proyecto?
+                <i class="ph ph-plus" aria-hidden="true"></i>
+              </button>
+            </h3>
+            <div class="faq__a" id="faq-1" role="region" aria-labelledby="faq-1-q">
+              <div><p>Depende del alcance. Después de una primera conversación te enviamos una propuesta con precio cerrado y tiempos por etapa.</p></div>
+            </div>
+          </div>
+          <div class="faq__item">
+            <h3>
+              <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-2" id="faq-2-q">
+                ¿Cuánto tiempo toma?
+                <i class="ph ph-plus" aria-hidden="true"></i>
+              </button>
+            </h3>
+            <div class="faq__a" id="faq-2" role="region" aria-labelledby="faq-2-q">
+              <div><p>Un sitio web suele estar listo en pocas semanas; un sistema a la medida toma algunos meses. Te damos fechas concretas para cada entrega.</p></div>
+            </div>
+          </div>
+          <div class="faq__item">
+            <h3>
+              <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-3" id="faq-3-q">
+                ¿Trabajan solo con negocios de Cundinamarca?
+                <i class="ph ph-plus" aria-hidden="true"></i>
+              </button>
+            </h3>
+            <div class="faq__a" id="faq-3" role="region" aria-labelledby="faq-3-q">
+              <div><p>No. Estamos en Bogotá, Tocaima y Girardot, y trabajamos de forma remota con empresas de todo el país.</p></div>
+            </div>
+          </div>
+          <div class="faq__item">
+            <h3>
+              <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-4" id="faq-4-q">
+                ¿El software queda a mi nombre?
+                <i class="ph ph-plus" aria-hidden="true"></i>
+              </button>
+            </h3>
+            <div class="faq__a" id="faq-4" role="region" aria-labelledby="faq-4-q">
+              <div><p>Sí. El código, el dominio y los datos son tuyos. Te entregamos accesos y documentación.</p></div>
+            </div>
+          </div>
+          <div class="faq__item">
+            <h3>
+              <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-5" id="faq-5-q">
+                ¿Pueden mejorar un sistema que ya tengo?
+                <i class="ph ph-plus" aria-hidden="true"></i>
+              </button>
+            </h3>
+            <div class="faq__a" id="faq-5" role="region" aria-labelledby="faq-5-q">
+              <div><p>Sí. Revisamos lo que tienes, te decimos qué vale la pena conservar y lo mejoramos por etapas, sin detener tu operación.</p></div>
+            </div>
+          </div>
+          <div class="faq__item">
+            <h3>
+              <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-6" id="faq-6-q">
+                ¿Qué pasa después de la entrega?
+                <i class="ph ph-plus" aria-hidden="true"></i>
+              </button>
+            </h3>
+            <div class="faq__a" id="faq-6" role="region" aria-labelledby="faq-6-q">
+              <div><p>Seguimos contigo con soporte, ajustes y capacitación. Si quieres, eliges un plan de mantenimiento mensual.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONTACTO (formulario) ============ -->
+    <section class="section section--tint" id="contacto" aria-labelledby="contacto-title">
+      <div class="container contact">
+        <div class="contact__info reveal">
+          <h2 id="contacto-title">Cuéntanos qué necesitas</h2>
+          <p>Te respondemos en menos de un día hábil con los siguientes pasos y una idea clara del alcance.</p>
+
+          <!-- Datos de contacto de ejemplo: reemplazar por los reales -->
+          <ul class="contact__list">
+            <li>
+              <i class="ph ph-whatsapp-logo" aria-hidden="true"></i>
+              <a class="link" href="https://wa.me/573000000000" target="_blank" rel="noopener">+57 300 000 0000</a>
+            </li>
+            <li>
+              <i class="ph ph-envelope-simple" aria-hidden="true"></i>
+              <a class="link" href="mailto:hola@voltsoluciones.co">hola@voltsoluciones.co</a>
+            </li>
+            <li>
+              <i class="ph ph-map-pin" aria-hidden="true"></i>
+              <span>Bogotá, Tocaima y Girardot</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card form-card reveal" style="--i:1">
+          <!-- Para recibir mensajes reales, agrega tu endpoint (Formspree, backend propio...) en data-endpoint -->
+          <form class="form" id="contact-form" novalidate data-endpoint="">
+            <div class="form__row">
+              <div class="field">
+                <label for="f-nombre">Nombre</label>
+                <input id="f-nombre" name="nombre" type="text" autocomplete="name" placeholder="Ej. Laura Castañeda" required aria-describedby="f-nombre-err">
+                <p class="field__error" id="f-nombre-err"></p>
+              </div>
+              <div class="field">
+                <label for="f-correo">Correo</label>
+                <input id="f-correo" name="correo" type="email" autocomplete="email" placeholder="tu@empresa.com" required aria-describedby="f-correo-err">
+                <p class="field__error" id="f-correo-err"></p>
+              </div>
+            </div>
+
+            <div class="form__row">
+              <div class="field">
+                <label for="f-whatsapp">WhatsApp <span class="field__optional">(opcional)</span></label>
+                <input id="f-whatsapp" name="whatsapp" type="tel" autocomplete="tel" placeholder="300 123 4567" aria-describedby="f-whatsapp-help f-whatsapp-err">
+                <p class="field__help" id="f-whatsapp-help">Si prefieres que te escribamos por ahí.</p>
+                <p class="field__error" id="f-whatsapp-err"></p>
+              </div>
+              <div class="field">
+                <label for="f-tipo">Tipo de proyecto</label>
+                <div class="select">
+                  <select id="f-tipo" name="tipo" required aria-describedby="f-tipo-err">
+                    <option value="">Elige una opción</option>
+                    <option>Página web</option>
+                    <option>Tienda en línea</option>
+                    <option>App móvil</option>
+                    <option>Software a la medida</option>
+                    <option>Automatización e integraciones</option>
+                    <option>Aún no lo sé</option>
+                  </select>
+                  <i class="ph ph-caret-down" aria-hidden="true"></i>
+                </div>
+                <p class="field__error" id="f-tipo-err"></p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="f-mensaje">¿Qué quieres lograr?</label>
+              <textarea id="f-mensaje" name="mensaje" rows="4" placeholder="Cuéntanos sobre tu negocio y lo que necesitas." required aria-describedby="f-mensaje-err"></textarea>
+              <p class="field__error" id="f-mensaje-err"></p>
+            </div>
+
+            <div class="form__alert" role="alert" hidden>
+              <i class="ph ph-warning-circle" aria-hidden="true"></i>
+              <p>No pudimos enviar tu mensaje. Intenta de nuevo o escríbenos por WhatsApp.</p>
+            </div>
+
+            <button class="btn btn--primary btn--block" type="submit">
+              <span class="btn__label">Enviar mensaje</span>
+              <i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <div class="form-success" hidden tabindex="-1">
+            <i class="ph ph-check-circle" aria-hidden="true"></i>
+            <h3>¡Mensaje recibido!</h3>
+            <p>Gracias, <span data-success-name></span>. Te escribimos muy pronto con los siguientes pasos.</p>
+            <button class="btn btn--secondary btn--sm" type="button" data-form-reset>Enviar otro mensaje</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container footer__top">
+      <div class="footer__brand">
+        <img src="img/volt-logo.png" alt="VOLT soluciones digitales" width="640" height="201" loading="lazy">
+        <p>Software, webs y apps a la medida para pymes en Colombia.</p>
+      </div>
+
+      <nav class="footer__col" aria-label="Pie de página">
+        <h2>Explora</h2>
+        <a href="#servicios">Servicios</a>
+        <a href="#proceso">Proceso</a>
+        <a href="#proyectos">Proyectos</a>
+        <a href="#nosotros">Nosotros</a>
+        <a href="#preguntas">Preguntas</a>
+      </nav>
+
+      <div class="footer__col">
+        <h2>Contacto</h2>
+        <a href="https://wa.me/573000000000" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="mailto:hola@voltsoluciones.co">hola@voltsoluciones.co</a>
+        <span>Bogotá, Tocaima y Girardot</span>
+      </div>
+    </div>
+
+    <div class="container footer__bottom">
+      <p>© <span data-year>2026</span> VOLT soluciones digitales. Todos los derechos reservados.</p>
+      <a class="link" href="#inicio">Volver arriba <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+    </div>
+  </footer>
+</body>
+</html>
