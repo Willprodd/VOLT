@@ -66,29 +66,52 @@
 
   <main id="main">
 
-    <!-- ============ HERO (estructura de "plantilla hero.json") ============ -->
+    <!-- ============ HERO (aurora separadora arriba + título centrado que se junta) ============ -->
     <section class="hero" id="inicio" aria-labelledby="hero-title">
-      <div class="hero__glow" aria-hidden="true"></div>
+      <!-- Escena fija mientras se hace scroll: en ese recorrido la V se vuelve recta y el título se junta -->
+      <div class="hero__stage">
+        <!-- Fondo: rejilla tenue y brillo que baja desde la V -->
+        <div class="hero__bg" aria-hidden="true"></div>
 
-      <div class="container hero__grid">
-        <div class="hero__content">
-          <!-- badges -->
-          <ul class="hero__badges" data-anim style="--i:0">
-            <li class="badge"><i class="ph ph-code" aria-hidden="true"></i>Desarrollo a la medida</li>
-            <li class="badge"><i class="ph ph-storefront" aria-hidden="true"></i>Hecho para pymes</li>
-          </ul>
+        <!--
+          Aurora (WebGL): banda fina bajo la navegación que en el centro baja en una V pequeña.
+          Ajustes en data-* (ver initHeroAurora en js/main.js):
+            color1 / color2     colores base de cada capa
+            accent1 / accent2   color hacia el que viaja cada capa
+            band-width          grosor de la banda (1 = original, menos = más fina)
+            mouse-influence(-y) reacción horizontal / vertical al mouse
+            v-calm              ondulación cerca de la V (1 = igual que el original)
+            flat-level          altura de la aurora recta: 0 = arriba de la V, 1 = vértice
+            shift-y             sube toda la aurora (fracción del alto; en CSS: --v-shift-y)
+        -->
+        <div class="hero__aurora" aria-hidden="true"
+          data-color1="#2F5BFF" data-color2="#00B8E6"
+          data-accent1="#1E90FF" data-accent2="#3D8BFF"
+          data-speed="0.6" data-scale="1.4" data-brightness="1.2"
+          data-band-spread="1.3" data-band-width="0.84" data-layer-offset="0.45"
+          data-color-speed="0.8" data-mouse-influence="0.22" data-mouse-influence-y="0.04"
+          data-v-width="0.58" data-v-inset-top="0.12" data-v-inset-bottom="0.02"
+          data-v-calm="0.8" data-flat-level="0.3" data-shift-y="0"></div>
 
-          <!-- heading -->
-          <h1 class="hero__title" id="hero-title" data-anim style="--i:1">
-            Tecnología que <span class="accent">impulsa</span> tu pyme
+        <!-- Celda vacía bajo la navegación: js/main.js la mide y la aurora dibuja la V aquí -->
+        <span class="hero__visual" aria-hidden="true"></span>
+
+        <!-- Composición centrada: todo cuelga del eje de la V -->
+        <div class="container hero__inner">
+          <!-- Dos palabras a cada lado; al hacer scroll cada palabra viaja a su
+               lugar en una sola línea (js/main.js calcula el recorrido: --dx / --dy) -->
+          <h1 class="hero__title" id="hero-title">
+            <span class="hero__title-start" data-anim style="--i:1"><span class="hero__word accent">Energía</span> <span class="hero__word">digital</span></span>
+            <!-- Isotipo al centro del eje (trazo de assets/BRANDING.md); se retira al juntarse el título -->
+            <span class="hero__mark" aria-hidden="true">
+              <svg viewBox="0 0 201 181" focusable="false">
+                <path class="hero__mark-long" d="M0,0 H46 L110,181 H65 Z"/>
+                <path class="hero__mark-short" d="M155,0 H201 L150,129 H105 Z"/>
+              </svg>
+            </span>
+            <span class="hero__title-end" data-anim style="--i:2"><span class="hero__word">para</span> <span class="hero__word accent">negocios</span></span>
           </h1>
 
-          <!-- description -->
-          <p class="hero__lead" data-anim style="--i:2">
-            Diseñamos y desarrollamos software, webs y apps a la medida de tu negocio. Claro, rápido y con soporte cercano.
-          </p>
-
-          <!-- ctas -->
           <div class="hero__ctas" data-anim style="--i:3">
             <a class="btn btn--primary" href="#contacto">
               Cotiza tu proyecto
@@ -99,57 +122,13 @@
               Ver proyectos
             </a>
           </div>
-
-          <!-- stats: datos de ejemplo, reemplazar por cifras reales de VOLT -->
-          <dl class="hero__stats" data-anim style="--i:4">
-            <div class="stat">
-              <dt class="stat__head">
-                <i class="ph ph-lightning stat__icon" aria-hidden="true"></i>
-                <span class="stat__value" data-count="40" data-suffix="+">40+</span>
-                <span class="stat__label">proyectos</span>
-              </dt>
-              <dd class="stat__desc">Webs, apps y sistemas entregados a negocios colombianos</dd>
-            </div>
-            <div class="stat">
-              <dt class="stat__head">
-                <i class="ph ph-star stat__icon" aria-hidden="true"></i>
-                <span class="stat__value" data-count="4.9" data-decimals="1" data-suffix="/5">4.9/5</span>
-                <span class="stat__label">calificación</span>
-              </dt>
-              <dd class="stat__desc">Promedio de satisfacción de nuestros clientes</dd>
-            </div>
-          </dl>
         </div>
 
-        <!-- showcaseImages: columnas en movimiento continuo -->
-        <div class="showcase" aria-label="Galería de trabajos de VOLT" role="region">
-          <div class="showcase__inner">
-            <div class="showcase__col">
-              <div class="showcase__track">
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1556740758-90de374c12ad?auto=format&fit=crop&w=480&h=600&q=70" alt="Dueña de un negocio registrando una venta en una tablet" width="480" height="600" fetchpriority="high"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=480&h=600&q=70" alt="Portátil con un panel de analítica de ventas" width="480" height="600"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1587440871875-191322ee64b0?auto=format&fit=crop&w=480&h=600&q=70" alt="Bocetos de pantallas de una app sobre una mesa de trabajo" width="480" height="600" loading="lazy"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=480&h=600&q=70" alt="Equipo celebrando la entrega de un proyecto" width="480" height="600" loading="lazy"></figure>
-              </div>
-            </div>
-            <div class="showcase__col showcase__col--reverse">
-              <div class="showcase__track">
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=480&h=600&q=70" alt="Ingeniera revisando servidores en un centro de datos" width="480" height="600" fetchpriority="high"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=480&h=600&q=70" alt="Dos desarrolladores revisando código en un portátil" width="480" height="600"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=480&h=600&q=70" alt="Código fuente en la pantalla de un portátil" width="480" height="600" loading="lazy"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=480&h=600&q=70" alt="Sesión de planeación con notas adhesivas en la pared" width="480" height="600" loading="lazy"></figure>
-              </div>
-            </div>
-            <div class="showcase__col showcase__col--slow">
-              <div class="showcase__track">
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=480&h=600&q=70" alt="Cliente pagando con el celular en un comercio" width="480" height="600" fetchpriority="high"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=480&h=600&q=70" alt="Desarrolladores trabajando en sus escritorios" width="480" height="600"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=480&h=600&q=70" alt="Primer plano de código en un editor oscuro" width="480" height="600" loading="lazy"></figure>
-                <figure class="shot"><img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=480&h=600&q=70" alt="Vista cenital de un equipo trabajando con portátiles" width="480" height="600" loading="lazy"></figure>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Indicador de scroll: se desvanece mientras el título se junta -->
+        <span class="hero__scroll" aria-hidden="true">
+          <span class="hero__scroll-label">Desliza</span>
+          <span class="hero__scroll-line"><span></span></span>
+        </span>
       </div>
     </section>
 

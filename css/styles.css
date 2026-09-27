@@ -378,202 +378,287 @@ h3 {
 
 /* ==========================================================================
    Hero
+   Arriba, bajo la navegación, una aurora fina separa el header del cuerpo
+   y en el centro baja en una V pequeña. Debajo, todo centrado en el eje de
+   la V: título y botones.
+   En escritorio .hero__stage queda fijo (sticky) mientras se recorre el
+   alto extra de .hero; en ese recorrido la V se vuelve recta y las palabras
+   del título, dos a cada lado, viajan hasta formar una sola línea.
    ========================================================================== */
 .hero {
+  --m: 0; /* progreso V → recta (0 = V, 1 = recta); lo escribe js/main.js */
+  --visual: clamp(96px, 9.5vw, 148px); /* tamaño de la celda de la V */
+  --v-top: calc(var(--nav-h) + clamp(6px, 1.4vh, 16px)); /* altura de la banda */
+  position: relative;
+}
+
+.hero__stage {
   position: relative;
   display: flex;
-  align-items: center;
   min-height: 100dvh;
-  padding-top: calc(var(--nav-h) + clamp(24px, 5vh, 56px));
-  padding-bottom: clamp(40px, 7vh, 80px);
+  padding-top: calc(var(--v-top) + var(--visual));
+  padding-bottom: clamp(120px, 19vh, 176px); /* deja sitio al indicador de scroll */
   overflow: hidden;
 }
 
-/* Brillo difuso muy sutil cian/violeta permitido en el hero */
-.hero__glow {
+/* Solo se fija si el contenido cabe en pantalla; si no, la animación
+   sigue la salida del hero (ver updateProgress en js/main.js) */
+@media (min-width: 961px) and (min-height: 600px) {
+  .hero { height: 180vh; } /* recorrido de scroll de la animación */
+  .hero__stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+}
+
+/* Fondo en la parte baja (arriba la protagonista es la aurora): rejilla
+   tenue centrada en el eje y un brillo azul que sube desde el borde inferior */
+.hero__bg {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(40rem 28rem at 12% 18%, rgba(0, 224, 239, 0.07), transparent 70%),
-    radial-gradient(44rem 32rem at 88% 78%, rgba(85, 51, 189, 0.16), transparent 70%);
+    /* grano muy sutil: quita la sensación de fondo plano */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 55% 42% at 50% 100%, rgba(47, 91, 255, 0.2), transparent 72%),
+    radial-gradient(ellipse 24% 18% at 50% 100%, rgba(0, 224, 239, 0.06), transparent 70%);
 }
-
-.hero__grid {
-  position: relative;
-  z-index: var(--z-content);
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-  gap: clamp(32px, 5vw, 72px);
-  align-items: center;
-}
-
-.hero__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.hero__title {
-  margin-top: 1.75rem;
-  font-size: clamp(2rem, 3.7vw, 3.4rem);
-  line-height: 1.2;
-  max-width: 15ch;
-}
-
-.hero__lead {
-  margin-top: 1.25rem;
-  max-width: 46ch;
-  color: var(--text-muted);
-  font-size: clamp(1.0625rem, 1.3vw, 1.1875rem);
-}
-
-.hero__ctas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 2rem;
-}
-
-.hero__stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
-  margin-top: clamp(2rem, 5vh, 3rem);
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--edge);
-  max-width: 560px;
-}
-
-.stat + .stat {
-  padding-left: 1.5rem;
-  border-left: 1px solid var(--edge);
-}
-
-.stat__head {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.stat__icon {
-  align-self: center;
-  color: var(--accent);
-  font-size: 1.1rem;
-}
-
-.stat__value {
-  font-family: var(--font-display);
-  font-size: clamp(1.35rem, 2vw, 1.75rem);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.stat__label {
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-.stat__desc {
-  margin-top: 0.4rem;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
-
-/* Galería en movimiento (showcaseImages de la plantilla) */
-.showcase {
-  position: relative;
-  height: min(80dvh, 740px);
-  /* Se extiende hasta el borde derecho de la pantalla y se desvanece a la izquierda */
-  margin-right: calc((100vw - min(100vw - 2 * var(--gutter), var(--container))) / -2);
-  -webkit-mask-image:
-    linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to right, transparent 0, #000 12%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to right, transparent 0, #000 12%);
-  mask-composite: intersect;
-}
-
-.showcase__inner {
-  position: absolute;
-  inset: -18% -6%;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  transform: rotate(-7deg);
-}
-
-.showcase__col { overflow: hidden; }
-
-.showcase__track { will-change: transform; }
-
-.shot {
-  --c: 12px;
-  position: relative;
-  margin-bottom: 14px;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  background: var(--surface);
-  clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
-}
-
-.shot img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(0.7) brightness(0.72) contrast(1.08);
-  transition: filter 0.5s var(--ease), transform 0.8s var(--ease);
-}
-
-.shot::after {
+.hero__bg::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(16, 16, 27, 0) 45%, rgba(16, 16, 27, 0.55));
+  --cell: 72px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: var(--cell) var(--cell);
+  background-position: calc(50% + var(--cell) / 2) 100%;
+  -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 100%, #000 15%, transparent 72%);
+  mask-image: radial-gradient(ellipse 62% 58% at 50% 100%, #000 15%, transparent 72%);
+}
+/* Funde el final del hero con la sección siguiente */
+.hero__bg::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 12%;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+
+/* Aurora (WebGL, js/main.js): solo se ve la franja superior, donde va la
+   banda; arriba se funde con la navegación y abajo se apaga pronto.
+   Antes del scroll va algo atenuada para que el título sea el foco. */
+.hero__aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: calc(0.7 + 0.3 * var(--m));
+  -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--nav-h) * 0.45), #000 calc(var(--v-top) + 6px), #000 calc(var(--v-top) + var(--visual) * 1.1), transparent calc(var(--v-top) + var(--visual) * 2.6));
+  mask-image: linear-gradient(to bottom, transparent calc(var(--nav-h) * 0.45), #000 calc(var(--v-top) + 6px), #000 calc(var(--v-top) + var(--visual) * 1.1), transparent calc(var(--v-top) + var(--visual) * 2.6));
+}
+
+/* Respaldo sin WebGL: una línea azul suave bajo la navegación */
+.hero__aurora:not(.is-ready) {
+  background: radial-gradient(60% 18px at 50% calc(var(--v-top) + 8px), rgba(47, 91, 255, 0.35), transparent 100%);
+}
+
+.hero__aurora canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.6s var(--ease);
+}
+.hero__aurora.is-ready canvas { opacity: 1; }
+
+/* Celda vacía centrada bajo la navegación: js/main.js la mide y la aurora
+   dibuja la V justo aquí */
+.hero__visual {
+  /* Margen superior de la V dentro de su celda (fracción del alto) */
+  --v-inset-top: 0;
+  /* Margen inferior: más alto = vértice más arriba (V menos profunda) */
+  --v-inset-bottom: 0.3;
+  position: absolute;
+  top: var(--v-top);
+  left: 50%;
+  width: var(--visual);
+  aspect-ratio: 1;
+  translate: -50% 0;
   pointer-events: none;
 }
 
-.shot:hover img {
-  filter: saturate(0.95) brightness(0.95) contrast(1.05);
-  transform: scale(1.04);
+.hero__inner {
+  position: relative;
+  z-index: var(--z-content);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
-/* Movimiento del hero: entrada escalonada + galería continua */
+/* Título dividido: dos palabras a la izquierda y dos a la derecha, en los
+   bordes del contenedor. js/main.js mide dónde queda cada palabra en el
+   texto corrido (una línea centrada) y guarda el recorrido en --dx / --dy:
+   con --m = 0 están a los lados y con --m = 1 forman una sola línea. */
+.hero__title {
+  position: relative; /* referencia de las medidas de js/main.js */
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  /* Acerca las dos columnas al centro, lo mismo a cada lado */
+  padding-inline: clamp(24px, 5vw, 96px);
+  /* H1 de marca: 48-64 px. La línea final mide ~17.1em: siempre cabe */
+  font-size: clamp(2.25rem, 4.6vw, 4rem);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  /* Brillo difuso muy sutil (la marca evita el neón) */
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.08);
+}
+.hero__title .accent { text-shadow: 0 0 32px rgba(0, 224, 239, 0.2); }
+
+/* Isotipo en el hueco central, remate del eje que baja desde la V de la
+   aurora. Plano y sin brillo propio (regla de marca): la luz difusa va
+   detrás, aparte. Al hacer scroll se encoge y se apaga antes de que las
+   palabras lleguen al centro. */
+.hero__mark {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 1.5em;
+  aspect-ratio: 201 / 181;
+  opacity: calc(1 - var(--m) * 5);
+  scale: clamp(0.5, 1 - var(--m) * 2.5, 1);
+  translate: 0 calc(var(--m) * -24px);
+}
+.hero__mark::before {
+  content: "";
+  position: absolute;
+  inset: -110%;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(0, 224, 239, 0.13), rgba(47, 91, 255, 0.05) 55%, transparent);
+  pointer-events: none;
+}
+.hero__mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--accent);
+}
+
+/* Entrada: cada barra llega deslizándose por su propia diagonal */
+@media (prefers-reduced-motion: no-preference) {
+  .js .hero__mark-long,
+  .js .hero__mark-short { opacity: 0; }
+  .js .hero__mark-long { animation: mark-long 0.9s var(--ease) 0.42s forwards; }
+  .js .hero__mark-short { animation: mark-short 0.9s var(--ease) 0.52s forwards; }
+}
+
+@keyframes mark-long {
+  from { opacity: 0; transform: translate(-16px, -45px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mark-short {
+  from { opacity: 0; transform: translate(16px, -41px); }
+  to { opacity: 1; transform: none; }
+}
+
+.hero__title-start,
+.hero__title-end {
+  display: flex;
+  flex-direction: column;
+}
+.hero__title-start { align-items: flex-start; }
+.hero__title-end { align-items: flex-end; }
+
+/* El recorrido horizontal va adelante (ease-out) y el vertical cierra al
+   final (ease-in): cada palabra ya está en su columna cuando las dos filas
+   se unen, así no se montan unas sobre otras a mitad de camino. */
+.hero__word {
+  --mx: calc(1 - (1 - var(--m)) * (1 - var(--m)) * (1 - var(--m)));
+  --my: calc(var(--m) * var(--m));
+  translate: calc(var(--mx) * var(--dx, 0px)) calc(var(--my) * var(--dy, 0px));
+  will-change: translate;
+}
+
+/* Botones en espejo sobre el eje: dos columnas iguales y el mismo ancho */
+.hero__ctas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: clamp(0.75rem, 1.6vw, 1.25rem);
+  margin-top: clamp(48px, 10vh, 104px);
+}
+.hero__ctas .btn { width: 16rem; max-width: 100%; }
+.hero__ctas .btn:first-child { justify-self: end; }
+.hero__ctas .btn:last-child { justify-self: start; }
+
+/* Indicador de scroll: texto y una línea con un destello cian que baja;
+   se apaga al empezar a juntarse el título */
+.hero__scroll {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(18px, 3.5vh, 36px);
+  z-index: var(--z-content);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  translate: -50% 0;
+  opacity: calc(1 - var(--m) * 2.5);
+}
+.hero__scroll-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding-left: 0.24em; /* compensa el espaciado final para centrar el texto */
+}
+.hero__scroll-line {
+  position: relative;
+  width: 2px;
+  height: 52px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.hero__scroll-line span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, transparent, var(--accent));
+  box-shadow: 0 0 10px rgba(0, 224, 239, 0.8);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero__scroll-line span { animation: scroll-cue 1.9s var(--ease) infinite; }
+}
+
+@keyframes scroll-cue {
+  from { transform: translateY(-22px); }
+  to { transform: translateY(52px); }
+}
+
+/* Movimiento del hero: entrada escalonada del contenido */
 @media (prefers-reduced-motion: no-preference) {
   .js [data-anim] {
     opacity: 0;
     animation: rise 0.9s var(--ease) forwards;
     animation-delay: calc(var(--i, 0) * 90ms + 120ms);
   }
-
-  .js .showcase {
-    opacity: 0;
-    animation: fade 1.2s var(--ease) 0.3s forwards;
-  }
-
-  .showcase__track { animation: scroll-y 46s linear infinite; }
-  .showcase__col--reverse .showcase__track { animation-direction: reverse; animation-duration: 54s; animation-delay: -14s; }
-  .showcase__col--slow .showcase__track { animation-duration: 60s; animation-delay: -31s; }
-  .showcase:hover .showcase__track,
-  .showcase.is-paused .showcase__track { animation-play-state: paused; }
 }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(22px); }
   to { opacity: 1; transform: none; }
-}
-
-@keyframes fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scroll-y {
-  to { transform: translateY(-50%); }
 }
 
 /* ==========================================================================
@@ -1164,11 +1249,20 @@ h3 {
 }
 
 @media (max-width: 960px) {
-  .hero { min-height: auto; }
-  .hero__grid { grid-template-columns: minmax(0, 1fr); }
-  .hero__title { max-width: 16ch; }
-  .showcase { height: 380px; margin-inline: calc(var(--gutter) * -1); }
-  .showcase__inner { inset: -30% -4%; }
+  /* Sin escena fija: el título va centrado, una pareja de palabras por línea */
+  .hero { --visual: clamp(76px, 20vw, 108px); }
+  .hero__stage { min-height: 88svh; padding-bottom: clamp(40px, 7vh, 80px); }
+  .hero__title {
+    display: block;
+    padding-inline: 0;
+    font-size: clamp(2rem, 8.4vw, 3rem);
+    white-space: normal;
+  }
+  .hero__title-start,
+  .hero__title-end { display: block; }
+  .hero__mark { display: none; }
+  .hero__word { translate: none; }
+  .hero__scroll { display: none; }
 
   .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 48px; }
   .steps::before,
@@ -1249,12 +1343,10 @@ h3 {
   .values { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 
   .form__row { grid-template-columns: minmax(0, 1fr); }
-
-  .hero__stats { gap: 1rem; }
-  .stat + .stat { padding-left: 1rem; }
 }
 
 @media (max-width: 480px) {
+  .hero__ctas { grid-template-columns: minmax(0, 1fr); row-gap: 0.75rem; }
   .hero__ctas .btn { width: 100%; }
   .footer__top { grid-template-columns: minmax(0, 1fr); }
 }
