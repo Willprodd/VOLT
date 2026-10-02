@@ -1,7 +1,7 @@
 /* ==========================================================================
    VOLT soluciones digitales - interacciones
    Sin dependencias. Todo usa IntersectionObserver, salvo el progreso
-   de la aurora del hero (un listener de scroll pasivo).
+   de salida del hero (un listener de scroll pasivo).
    ========================================================================== */
 
 (() => {
@@ -10,6 +10,10 @@
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const reduceMotion = () => prefersReducedMotion.matches;
   const hasIO = 'IntersectionObserver' in window;
+
+  // Progreso de salida del hero (0 = arriba del todo, 1 = fuera de pantalla).
+  // Lo escribe initHeroScroll; la aurora y el planeta lo leen en su animación.
+  const heroScroll = { m: 0 };
 
   /* ---------- Navegación: fondo al hacer scroll ---------- */
   function initNavState() {
@@ -92,15 +96,14 @@
     });
 
     // Si la pantalla crece a escritorio con el menú abierto, se cierra
-    window.matchMedia('(min-width: 961px)').addEventListener('change', (e) => {
+    window.matchMedia('(min-width: 1041px)').addEventListener('change', (e) => {
       if (e.matches) setOpen(false);
     });
   }
 
-  /* ---------- Hero: fondo aurora en V (port sin dependencias de SoftAurora de React Bits) ----------
-     - Forma: banda fina bajo la navegación que en el centro baja en una V pequeña,
-       medida sobre .hero__visual. Al hacer scroll la V se abre hasta quedar recta
-       y el título (vía --m) junta sus palabras.
+  /* ---------- Hero: aurora recta detrás del logo (port sin dependencias de SoftAurora de React Bits) ----------
+     - Forma: banda horizontal a la altura de .hero__band (centro de las letras VOLT),
+       así la aurora hace de fondo del logo.
      - Movimiento: el del SoftAurora original (ruido Perlin 3D a plena amplitud,
        mouse y degradado coseno que recorre la pantalla).
      - Color: dos capas azules; el degradado las hace viajar hacia un acento azul
@@ -110,6 +113,19 @@
     const hero = document.getElementById('inicio');
     if (!host || !hero) return;
     const stage = hero.querySelector('.hero__stage') || hero;
+    // Marcador de la altura de la banda
+    const bandRef = hero.querySelector('.hero__band');
+
+    // Altura de la banda en px desde el borde superior de la aurora; también
+    // queda en CSS (--band-y) para el respaldo sin WebGL
+    const measureBand = () => {
+      const hostRect = host.getBoundingClientRect();
+      const y = bandRef
+        ? bandRef.getBoundingClientRect().top - hostRect.top
+        : hostRect.height * 0.42;
+      host.style.setProperty('--band-y', `${Math.round(y)}px`);
+      return { y, height: hostRect.height };
+    };
 
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl', {
@@ -119,7 +135,12 @@
       depth: false,
       powerPreference: 'low-power',
     });
-    if (!gl) return; // sin WebGL queda el degradado de respaldo del CSS
+    if (!gl) {
+      // Sin WebGL queda el halo de respaldo del CSS, a la altura del logo
+      measureBand();
+      if ('ResizeObserver' in window) new ResizeObserver(measureBand).observe(host);
+      return;
+    }
 
     // La aurora es muy difusa: se dibuja a media resolución y el navegador la escala
     const RENDER_SCALE = 0.5;
@@ -143,9 +164,8 @@
       accent2: hexToVec3(host.dataset.accent2 || '#3D8BFF'),
       noiseFreq: num('noiseFrequency', 2.5),
       noiseAmp: num('noiseAmplitude', 1),
-      bandHeight: num('bandHeight', 0.5),
       bandSpread: num('bandSpread', 1),
-      // Grosor de la banda (1 = el del original, menos = más fina)
+      // Grosor de la banda (1 = el del original, más = más gruesa)
       bandWidth: num('bandWidth', 1),
       octaveDecay: num('octaveDecay', 0.1),
       layerOffset: num('layerOffset', 0),
@@ -153,16 +173,7 @@
       mouseInfluence: num('mouseInfluence', 0.25),
       // Reacción vertical aparte y más baja: al subir o bajar el mouse la banda casi no se mueve
       mouseInfluenceY: num('mouseInfluenceY', 0.04),
-      vWidth: num('vWidth', 0.62),
-      vInsetTop: num('vInsetTop', 0),
-      vInsetBottom: num('vInsetBottom', 0),
-      // Sube (o baja, si es negativo) toda la aurora; fracción del alto del hero
-      shiftY: num('shiftY', 0),
-      vCalm: num('vCalm', 0.8),
-      flatLevel: num('flatLevel', 0.3),
     };
-
-    const vTarget = document.querySelector('.hero__visual');
 
     const vertex = `
       attribute vec2 position;
@@ -187,7 +198,8 @@
       uniform vec3 uAccent2;
       uniform float uNoiseFreq;
       uniform float uNoiseAmp;
-      uniform float uBandHeight;
+      uniform float uBandY;      // altura de la banda (uv: 1.0 = alto del lienzo, y desde abajo)
+      uniform float uBandScale;  // 1 / grosor de la banda
       uniform float uBandSpread;
       uniform float uOctaveDecay;
       uniform float uLayerOffset;
@@ -195,17 +207,6 @@
       uniform vec2 uMouse;
       uniform float uMouseInfluence;
       uniform float uMouseInfluenceY;
-      // V (unidades de uv: 1.0 = alto del lienzo, y desde abajo)
-      uniform float uVEnabled;
-      uniform float uVCenterX;
-      uniform float uVTop;
-      uniform float uVDepth;
-      uniform float uVHalfWidth;
-      uniform float uVCalm;
-      uniform float uFlatY;
-      uniform float uBandScale;
-      // 0 = V completa, 1 = aurora recta
-      uniform float uMorph;
 
       #define TAU 6.28318
       // Color del centro de la línea cuando brilla más (azul pálido)
@@ -270,89 +271,8 @@
         return amplitude * mix(mix(lx00, lx10, sy), mix(lx01, lx11, sy), sz);
       }
 
-      // Suavizado de la punta de la V y de sus dos esquinas superiores
-      // (fracción del medio ancho de la V; más alto = más redondeado).
-      #define V_TIP 0.1
-      #define V_CORNER 0.16
-      // Ancho de la transición del grosor en las esquinas y en la punta
-      #define V_SLOPE_BLEND 0.3
-      #define V_TIP_BLEND 0.35
-      // Cuánto se reduce el brillo que llena el interior de la punta (0 = nada)
-      #define V_TIP_TRIM 0.35
-
-      // Altura de la línea central de la banda en x: plana, y en el centro
-      // baja en V. Es una curva continua, sin quiebres donde se unen los
-      // tramos, así el brillo no forma pliegues en la punta ni en las esquinas.
-      float vLine(float x, float top, float depth, float hw) {
-        float s = (x - uVCenterX) / hw;
-        float sa = sqrt(s * s + V_TIP * V_TIP) - V_TIP;       // |s| con la punta suavizada
-        float v = 1.0 - sa;
-        v = 0.5 * (v + sqrt(v * v + V_CORNER * V_CORNER));    // max(v, 0) con las esquinas suavizadas
-        return top - depth * v;
-      }
-
-      float segmentDistance(vec2 p, vec2 a, vec2 b) {
-        vec2 pa = p - a;
-        vec2 ba = b - a;
-        float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-        return length(pa - ba * h);
-      }
-
-      // Distancia real desde p hasta la curva, recorriéndola a tramos cortos
-      // alrededor de p. Se usa solo debajo de la punta, donde el brillo debe
-      // alejarse del vértice por igual hacia todos lados.
-      float curveDistance(vec2 p, float top, float depth, float hw) {
-        const float R = 0.3;
-        const float N = 24.0;
-        float best = 1e3;
-        vec2 prev = vec2(p.x - R, vLine(p.x - R, top, depth, hw));
-        for (float i = 1.0; i <= N; i += 1.0) {
-          float x = p.x - R + 2.0 * R * i / N;
-          vec2 cur = vec2(x, vLine(x, top, depth, hw));
-          best = min(best, segmentDistance(p, prev, cur));
-          prev = cur;
-        }
-        return best;
-      }
-
-      // Distancia con signo hasta la línea central de la banda.
-      // Con uMorph = 0 es la V; al subir uMorph la V se abre, pierde
-      // profundidad y sube hasta uFlatY, donde queda como la recta original.
-      // La diferencia de altura se divide por la inclinación de los brazos,
-      // así tienen el mismo grosor que la parte plana. Ese factor cambia
-      // suave solo en las esquinas y se mantiene en la punta: si siguiera la
-      // inclinación real, en la punta caería de golpe y dejaría una línea
-      // oscura encima y un haz de luz debajo.
-      float bandDistance(vec2 p) {
-        if (uVEnabled < 0.5) return p.y - uBandHeight;
-
-        float m = uMorph;
-        float top = mix(uVTop, uFlatY, m);
-        float depth = uVDepth * (1.0 - m);
-        float hw = uVHalfWidth * (1.0 + 1.2 * m);
-
-        float lineY = vLine(p.x, top, depth, hw);
-        float s = abs(p.x - uVCenterX) / hw;
-        float armSlope = (depth / hw) * (1.0 - smoothstep(1.0 - V_SLOPE_BLEND, 1.0 + V_SLOPE_BLEND, s));
-
-        if (p.y < lineY) {
-          // Debajo de la V: cerca de la punta se usa la distancia real a la
-          // curva, así el brillo no cuelga hacia abajo ni forma rayas; en los
-          // brazos y las esquinas basta la estimación por inclinación.
-          float d = (lineY - p.y) / sqrt(1.0 + armSlope * armSlope);
-          float nearTip = 1.0 - smoothstep(0.5, 0.85, s);
-          if (nearTip > 0.0) d = mix(d, curveDistance(p, top, depth, hw), nearTip);
-          return -d;
-        }
-
-        // Encima (dentro de la V) se recorta un poco para que la punta
-        // no se vea como una mancha grande.
-        armSlope *= mix(1.0, smoothstep(0.0, V_TIP_BLEND, s), V_TIP_TRIM);
-        return (p.y - lineY) / sqrt(1.0 + armSlope * armSlope);
-      }
-
       // Igual que el original: 3 octavas de ruido que deforman la banda.
-      float auroraGlow(float t, vec2 shift, float bandDist, float calm) {
+      float auroraGlow(float t, vec2 shift) {
         vec2 uv = gl_FragCoord.xy / uResolution.y;
         uv += shift;
 
@@ -367,27 +287,17 @@
           freq *= 2.0;
         }
 
-        float yBand = (bandDist + shift.y) * 10.0 * uBandScale;
-        return 0.3 * max(exp(uBandSpread * (1.0 - 1.1 * abs(noiseVal * calm + yBand))), 0.0);
+        float yBand = (uv.y - uBandY) * 10.0 * uBandScale;
+        return 0.3 * max(exp(uBandSpread * (1.0 - 1.1 * abs(noiseVal + yBand))), 0.0);
       }
 
       void main() {
         vec2 uv = gl_FragCoord.xy / uResolution.xy;
-        vec2 p = gl_FragCoord.xy / uResolution.y;
         float t = uSpeed * 0.4 * uTime;
         vec2 shift = (uMouse - 0.5) * vec2(uMouseInfluence, uMouseInfluenceY);
 
-        float bandDist = bandDistance(p);
-        // Cerca del vértice la ondulación se suaviza un poco para que la V
-        // se lea; al volverse recta recupera toda la del original.
-        float calm = 1.0;
-        if (uVEnabled > 0.5) {
-          calm = mix(uVCalm, 1.0, smoothstep(0.0, uVHalfWidth * 1.6, abs(p.x - uVCenterX)));
-          calm = mix(calm, 1.0, uMorph);
-        }
-
-        float glow1 = auroraGlow(t, shift, bandDist, calm);
-        float glow2 = auroraGlow(t + uLayerOffset, shift, bandDist, calm);
+        float glow1 = auroraGlow(t, shift);
+        float glow2 = auroraGlow(t + uLayerOffset, shift);
         vec3 gradient1 = cosineGradient(uv.x + uTime * uSpeed * 0.2 * uColorSpeed, vec3(0.5), vec3(0.5), vec3(1.0), vec3(0.3, 0.20, 0.20));
         vec3 gradient2 = cosineGradient(uv.x + uTime * uSpeed * 0.1 * uColorSpeed, vec3(0.5), vec3(0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25));
 
@@ -454,121 +364,63 @@
     const uTime = u('uTime');
     const uResolution = u('uResolution');
     const uMouse = u('uMouse');
-    const uMorph = u('uMorph');
-    const uVEnabled = u('uVEnabled');
-    const uVCenterX = u('uVCenterX');
-    const uVTop = u('uVTop');
-    const uVDepth = u('uVDepth');
-    const uVHalfWidth = u('uVHalfWidth');
-    const uFlatY = u('uFlatY');
+    const uBandY = u('uBandY');
     const uBandScale = u('uBandScale');
-
-    // Profundidad de la V (en uv) para la que el grosor original de la banda se ve bien.
-    const V_REFERENCE_DEPTH = 0.34;
+    const uBrightness = u('uBrightness');
+    const bandScale = 1 / Math.max(0.1, opts.bandWidth);
 
     gl.uniform1f(u('uSpeed'), opts.speed);
     gl.uniform1f(u('uScale'), opts.scale);
-    gl.uniform1f(u('uBrightness'), opts.brightness);
+    gl.uniform1f(uBrightness, opts.brightness);
     gl.uniform3fv(u('uColor1'), opts.color1);
     gl.uniform3fv(u('uColor2'), opts.color2);
     gl.uniform3fv(u('uAccent1'), opts.accent1);
     gl.uniform3fv(u('uAccent2'), opts.accent2);
     gl.uniform1f(u('uNoiseFreq'), opts.noiseFreq);
     gl.uniform1f(u('uNoiseAmp'), opts.noiseAmp);
-    gl.uniform1f(u('uBandHeight'), opts.bandHeight);
+    gl.uniform1f(uBandScale, bandScale);
     gl.uniform1f(u('uBandSpread'), opts.bandSpread);
     gl.uniform1f(u('uOctaveDecay'), opts.octaveDecay);
     gl.uniform1f(u('uLayerOffset'), opts.layerOffset);
     gl.uniform1f(u('uColorSpeed'), opts.colorSpeed);
     gl.uniform1f(u('uMouseInfluence'), opts.mouseInfluence);
     gl.uniform1f(u('uMouseInfluenceY'), opts.mouseInfluenceY);
-    gl.uniform1f(u('uVCalm'), opts.vCalm);
     gl.clearColor(0, 0, 0, 0);
 
     const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
-    // Progreso V → recta: target lo marca el scroll, value lo sigue suavizado
-    const morph = { value: 0, target: 0 };
     // Punto de partida fijo en el tiempo para que el primer cuadro ya tenga forma
     const TIME_OFFSET = 18;
     let running = false;
     let frame = 0;
     let lastTime = 0;
-    let lastCssMorph = -1;
-
-    const clamp01 = (v) => Math.min(1, Math.max(0, v));
-    const smoothstep = (a, b, x) => {
-      const t = clamp01((x - a) / (b - a));
-      return t * t * (3 - 2 * t);
+    // Pasa la altura de la banda al shader, en unidades de uv
+    const updateBand = () => {
+      const { y, height } = measureBand();
+      if (height) gl.uniform1f(uBandY, 1 - y / height);
     };
 
-    // El progreso queda en CSS como --m sobre .hero (0 = V, 1 = recta): el título lo usa para acercar sus dos partes
-    const syncCssMorph = () => {
-      const m = Math.round(morph.value * 1000) / 1000;
-      if (m !== lastCssMorph) {
-        hero.style.setProperty('--m', m);
-        lastCssMorph = m;
-      }
-    };
+    // Scroll suavizado: al bajar la banda se estrecha, pierde brillo y sube con el logo
+    let scrollM = 0;
+    let bandM = -1;
 
     const renderFrame = (now) => {
       mouse.x += (mouse.tx - mouse.x) * 0.05;
       mouse.y += (mouse.ty - mouse.y) * 0.05;
+      scrollM += (heroScroll.m - scrollM) * 0.12;
+      if (Math.abs(scrollM - bandM) > 0.002) {
+        bandM = scrollM;
+        updateBand();
+        gl.uniform1f(uBandScale, bandScale * (1 + scrollM * 2.2));
+        gl.uniform1f(uBrightness, opts.brightness * (1 - scrollM * 0.6));
+      }
       gl.uniform1f(uTime, now * 0.001 + TIME_OFFSET);
       gl.uniform2f(uMouse, mouse.x, mouse.y);
-      gl.uniform1f(uMorph, morph.value);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
-    // Scroll: con .hero__stage fijo (sticky) el recorrido extra del .hero marca el
-    // progreso; si no está fijo (móvil, pantallas bajas) se usa la salida del hero.
-    const updateProgress = () => {
-      const rect = hero.getBoundingClientRect();
-      const pinned = getComputedStyle(stage).position === 'sticky';
-      const travel = pinned ? rect.height - window.innerHeight : window.innerHeight * 0.6;
-      const progress = travel > 0 ? clamp01(-rect.top / travel) : 0;
-      morph.target = smoothstep(0.04, 0.75, progress);
-      if (!running) {
-        // Sin animación continua (reducir movimiento) se aplica directo
-        morph.value = morph.target;
-        syncCssMorph();
-        renderFrame(lastTime);
-      }
-    };
-
-    // Pasa la posición de la celda central al shader, en unidades de uv
-    const updateV = () => {
-      const hostRect = host.getBoundingClientRect();
-      const rect = vTarget?.getBoundingClientRect();
-      const H = hostRect.height;
-      if (!rect || !rect.height || !H) {
-        gl.uniform1f(uVEnabled, 0);
-        gl.uniform1f(uBandScale, 1 / opts.bandWidth);
-        return;
-      }
-      const styles = getComputedStyle(vTarget);
-      const cssNum = (prop, fallback) => {
-        const v = parseFloat(styles.getPropertyValue(prop));
-        return Number.isFinite(v) ? v : fallback;
-      };
-      const insetTop = cssNum('--v-inset-top', opts.vInsetTop);
-      const insetBottom = cssNum('--v-inset-bottom', opts.vInsetBottom);
-      const top = rect.top - hostRect.top + rect.height * insetTop;
-      const bottom = rect.bottom - hostRect.top - rect.height * insetBottom;
-      const depth = (bottom - top) / H;
-      const vTop = 1 - top / H + cssNum('--v-shift-y', opts.shiftY);
-      gl.uniform1f(uVEnabled, 1);
-      gl.uniform1f(uBandScale, Math.min(3, Math.max(1, V_REFERENCE_DEPTH / depth)) / opts.bandWidth);
-      gl.uniform1f(uVCenterX, (rect.left - hostRect.left + rect.width / 2) / H);
-      gl.uniform1f(uVTop, vTop);
-      gl.uniform1f(uVDepth, depth);
-      gl.uniform1f(uVHalfWidth, depth * opts.vWidth);
-      // Altura final de la aurora recta
-      gl.uniform1f(uFlatY, vTop - depth * opts.flatLevel);
-    };
-
     const resize = () => {
-      updateV();
+      updateBand();
       const w = Math.max(1, Math.round(host.clientWidth * RENDER_SCALE));
       const h = Math.max(1, Math.round(host.clientHeight * RENDER_SCALE));
       if (canvas.width !== w || canvas.height !== h) {
@@ -577,15 +429,11 @@
         gl.viewport(0, 0, w, h);
         gl.uniform3f(uResolution, w, h, w / h);
       }
-      updateProgress();
       if (!running) renderFrame(lastTime);
     };
 
     const loop = (now) => {
       lastTime = now;
-      morph.value += (morph.target - morph.value) * 0.08;
-      if (Math.abs(morph.target - morph.value) < 0.0005) morph.value = morph.target;
-      syncCssMorph();
       renderFrame(now);
       frame = running ? requestAnimationFrame(loop) : 0;
     };
@@ -611,8 +459,6 @@
       mouse.ty = 0.5;
     });
 
-    window.addEventListener('scroll', updateProgress, { passive: true });
-
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
       stop();
@@ -621,15 +467,13 @@
 
     host.appendChild(canvas);
     resize();
-    morph.value = morph.target; // si la página abre ya con scroll, arranca en su punto
-    syncCssMorph();
     requestAnimationFrame(() => host.classList.add('is-ready'));
 
-    // La celda puede moverse sin que cambie el tamaño del hero (p. ej. al cargar las fuentes)
+    // El logo puede moverse sin que cambie el tamaño del hero (p. ej. al cargar las fuentes)
     if ('ResizeObserver' in window) {
       const ro = new ResizeObserver(resize);
       ro.observe(host);
-      if (vTarget) ro.observe(vTarget);
+      if (bandRef?.parentElement) ro.observe(bandRef.parentElement);
     } else {
       window.addEventListener('resize', resize);
     }
@@ -638,7 +482,7 @@
     prefersReducedMotion.addEventListener('change', () => {
       if (reduceMotion()) {
         stop();
-        updateProgress();
+        renderFrame(lastTime);
       } else start();
     });
 
@@ -652,68 +496,886 @@
     }
   }
 
-  /* ---------- Hero: recorrido de las palabras del título ----------
-     El título empieza dividido (dos palabras a cada lado). Para cada palabra
-     se calcula dónde queda en el texto corrido, una sola línea centrada en el
-     título, y se guarda la diferencia en --dx / --dy; el CSS la multiplica
-     por --m, que escribe la aurora con el progreso del scroll. */
-  function initHeroTitle() {
-    const title = document.querySelector('.hero__title');
-    if (!title) return;
-    const words = [...title.querySelectorAll('.hero__word')];
-    if (!words.length) return;
+  /* ---------- Hero: planeta conectado (esquina inferior izquierda) ----------
+     Canvas 2D sin dependencias. El planeta gira despacio y solo asoma su
+     cuarto superior derecho: el centro queda fuera de pantalla, abajo a la
+     izquierda. Capas: brillo de atmósfera y esfera (fijas, se dibujan una
+     vez), continentes en puntos, rutas de red entre ciudades con pulsos que
+     las recorren, nodos (Bogotá con un anillo que late) y un halo de
+     partículas alrededor. */
+  function initHeroGlobe() {
+    const canvas = document.querySelector('.hero__globe');
+    const hero = document.getElementById('inicio');
+    if (!canvas || !hero) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const layout = () => {
-      // En móvil el título ya va centrado y no se mueve
-      const split = getComputedStyle(title).display === 'grid';
-      if (!split) {
-        words.forEach((w) => {
-          w.style.removeProperty('--dx');
-          w.style.removeProperty('--dy');
+    // Tierra: un bit por punto de una esfera de Fibonacci de 48 000 puntos
+    // (1 = tierra). Generado de Natural Earth 110 m (dominio público), sin la Antártida.
+    const LAND_BITS = 'AAAAAAAAAAAAAAAAAAAAAAAAIAAAAIAQABIAQgBICAgJISEhJISMhLAQEJJCRkJICggJIQkgJAQEhJAVEBJCUkBICgkIISkgJAQEhJATEBACwkDICAgKAQMk4IQMgJgDMHRCBsDcAJkIIQNgKAAMgIEBMBACDsDQABkwAwdmZAAcgLEDM2BGjszEATgQYwdixogciZkjcGHGDszMkTgSc0d25shMiZknMWtmLsSMk5g3M89m1kxM24tvMWtnvsW9t7iXF9/mXtl8y0tvc6tvvuW9t/jW19ru3t992ntt8++vvP21v/v31972399522tv/++vvP29v/P3197+/155+/tv722vvf3/v/L319/e/15bu/9v523vvb3/vbJ299/K/197O/9/5+3uvJ3/vfJ239/O3195O/9/Ze2+vZW/v/J23t7a2n97K39/5+28vZW1//ZW3t7O2/17K29/5e38vZW1+/dW3t7K2/17K2v37az8vZWx+/dW3s7KW/l7K2Pn7a38nZWx+/dW3s7KS/k7K2PnbaX8nZWT83dWTs7LSrk7KzPn76S8nJWXcndWZs7NSbk7Kytn5qSMnJGTcndSZs7Mabk7IStn5qTMnJGTcndSds7MaZk7Iy/n7qTsnJHTcnNCfs7NaZk5Iy/n5qTsnJPTc3NCXs7cSdk5Iyfn5oT8nLvTM3NCTs7NCdk5cydn5oT8nJnTs3NCTs7Mifk5N6dn5oT8nJkTs3Nmbs7Mifk5N6fn5qTcnpsT83NmTs7NCbk9N6fn58TcnpuT83NuTs/NSbk9N6fn59TcnJuTc3NuTs/Nebk9N6fn59TcnpuTcntuTs/Pqbk5Nyfn5tycnpvTcnNuTs/Pqbk9Nyfn5tycnpvTc3NuTs/Nqbk9N6fm5tycnptTc3JuTs/NuTk9N6fn5NycnJNTc3NuTs3JuTk5J6fn5NycnptTc3JuTs3JuTk9J6fm5tycnptTc3NuTs3JuTk9J6fm9pycmpNTc3tuTs3NqTk9J6fm9tycnpNTc3pOTs3tOTk1J6fm9Nycmptzc3pOTs3JuTk1J6fm9tycmpNzc2pOTs3JuRk9J6fm9NycmpNzM2pOTs3ouDk1J+fm1NycmpNxM2puTs3ouDk1J+dm1NycmpFxc2pOzsypuTk1J+Nm1JycmlFzcmpOxsypuTk1I+Pm9JycmFFzc2pOxs2oOTk1o+bk9JycmVFzcmJGxsnoOTk1o+bm9JyMkVFzcmpGxMnoOT03o+bkxIyOkZFzempGxcnIOTUjo+bkxIyKkZFzempGxcmIGRUjI+fkxIyKkRFzam5GzcmoGRUjI+b01IyKkxFzam5Oz8mJGRUjI+bU1JyKkxFzak5OzumJGRUjI+bUnJyIk1NzKk5OzKgJORUnJ2bUnJyckxNzKk5OzKgZOTEnp+bUnJicUxNyKkZOzKkZOTEnJ+ZUjJyYURNyIk5OzKkZMTmjJuRUjJiYUTNiYk5OzKk4MTGjJuRUjJiYUzNick5OyKkYMTGjJsREjJyYU3NiYk5NyKkYMTGnpsTknJyQUzFiYkZNyYkYMTGnZuTknJyQUzFiYkZNyckYMSGnZuTEjJ6QkzFiakZNyck5OSWnZsTUjJiQkzNiakbMiKkZOSEjZ8TUjJiQ0TNyakbMiKkZMSGjZ8TUjJgQ0TNySkbOiKkZMSGjZ8TUjJ4QUzNyQkbPiKkZNSGiZ+SUjJ4RUzNiQk7PiKkZPSGiZsSEjJ4RUzN6QkbNiCkZPSGmZsSEjJoRUzJqQkbNiCkZPSGmZvSEjJoRUzJ6QkzNiAkZNSGmZPSEjJoRUzJqQkzN6AkZNSGmZPSEnJoRUzJqQkzJ6CkZNSemZNSEmJpRUzJqQkzJqCkZNSemZNSEmJLRUzJqSkzJqAk5NaemZNSEmJJTUzJqTkzJqAk5Jaem5NSEmJJTU3JqTk3JqQkxJaem5NSUmJJTU3JKSk3JqQkxJaem5NScmJJTUmJKTk3JqSkxJaem5NSUmpJTUmJKTk3JKSkxJaeg5JSUkpJTUmJKTk3JqSk1JaegxJSckpJTUmJKTkHJqTklJaekxJSckpJTUmpKTkGJKSklJaekxJSckpJTU0pKTkGJKSklJaeklJScghJTc0pKTkmJKTklJaOklJScghJTckpKTkkpKTklJaLmlJScghJTUkpKRkkpKTklJabmlJScglJTU0pKRkkpKTkFJabklJScglJSckpKRE0pKTkFpaaklJSMglJSckpKTE0pKTkFpaaklJSIglJSckpKTcEpKTkFpaTklJSIilJScgpKTUUpKTEFpaTglJSaglNScApKSUEpKRklpaTglJSaglNSYApKSUEpKREFpaTgFJSSilJSYkpKScEpKRUFpaTAlJSSglJSMkpKScEpKTUFpaTAlJSSglJSKkpKSYEpKSUFp6Tg1JSSglJSKkpKSYEpKSUFpaRQ1JSSAlNSakpKSYEpKSUFpKRU1JSSAlNTSgpKSaGpKSUFpKRU0JSSAlNSSgpISakoKSUFpqSUVJCSAkNSSgpISakgKSUFpqSUFJCaQkNCSgpISamhICUFhoSUFJCaQkFSSgpMSSmpIDUFhoSUFJCSQkFASgpMCSmpIDWFhoSUFJiSQkFAagoMCSkpICWFgqCUFBiSUkNAagoNCSkpICWFgoDUVBkSUlJAagoFSSmpICSFgoDUVBgSUlJASgoFAampMCSkpoDUVBqSUlJASAoFAampMCSkpoCUFBoCUlNBSEoFBakpOCSkpoCUVAoCUlNASEgNASkpPASkpoCQFAoCUlNASEhNASEpNASkpoCQlAoCUlNYCEhNASEpFASkpoAQlIoCQlJYCEhNASEpFASkpqAQkJoCQlJICEhNASEoFQSkpLAQkBoCQlIoCEhNQSEoBQWEpJAQkJoCQlEICAhNYSEoJQSEppAQkJoCQlAKCAhNISEgNQSEopAQEJqCQlBKCAhFISEgNQWEohAQEJrCQlBKCAhFISEgNQWEoBQQEIpCQkBKCAhFISEgNIWFoJQQEIpCQkBqCghFISEgFIWFgJQQEIpCQkAKCghBKSAgFIWFgJQQEIpCQkAICgtBKSEgFIWEgBQUEIJCQkAoCgkBKSEgFIWEgBAQEIJSQkAoCgkBKSggFIWEgBAQEgJSQEAoCgkBKSggBIWEgBAUEgJSQEEoCgsBISAgBKWAgFAUEgJSUEAICgkBISEsBKSAglAUFgJCQkEICgkFISkkBKSAglAUEgJCQkEIaAEFISgkBKSEohBUEgpCQkEISAkFoagkBISEghBQEgpCQFkISElFoagkBISEghCQEgpCQUkICAkFIaAkFISEolCQEoJCUVkICAkFIaAkFISAklCQkgpCQUkoCAkFoSAlFIWgshCQEgpCQUkoCAEFISAkFYSAslAQEgpCQUkoCAFloSAlFYSAklAQEopCQEkoCAFloSAlFISCklAQAopCQEgoCAEloSAlFISCklAQAspCQUoqCAEloSAEFISAklAQAspCQUooCAEloSgEFIWAklAQAkpCQQgoCAEloSAEFIWClFQQAkpCQQgoCAEloSAEFISCEFQQAEpCUQgoCgEloSAAlISCElQQAkpCUQAoCAUlqSAAlISiElAQAkpCUQAoCAUlqCAAlKSiAlAQCgpCQQAoSEUlqCAElISCAFAQCgpQQQAoSUUFoCAEFISCAFAQigpQQQAoSEUFoCAQFKCCAFAQigpAQQAoSAUBoCAQFaCCAFCQigpAQQAoAAUBoCAUFaCCAFCQCgpAQSAqAAUBoCAUFYCCAFCACgJAQSAqQAUBoCAVFYCCQFQACgJAQSgqQAUBoAAVFICCQFQACgJAQSgqAAWBqAAVBICCUFSACgJAASgoAAWBqAAVBICiUFSACgJRASooAAWBqAAVBKACUFQAigJRASoIAEWhqAAUBaICUFQACgJRASoKQAWgqAAUBaICVFAACkJRASoKRAWgoAAUBKICVBAACkBRASoIRAWgoAAUBKICVBCACkBRASgIREWoqAAUgKICVBCICkBBASgIREWooAAUgKICUBCIikBBASgIRQWoqBAVgIICUBCIikBRASgARQWooBAVgYICUBCIilBRASgABQWooBAVgaICUACKClBBISoABUWgIBAVgaICUACKClBBISoARUWgABAVoaJCUAAKilBBISoCRUWggBQVoIJCVAAKilABISoCRUWgiBQUoYJCUACOikARISpCBcWgiBQUoQJCUAQKikABKSpCBcWggBQUgQJCUACKikEBKShCBcWgABQVgQJCUISKikEBKShCBYSgABQUgQJCUIQKikEBOSgCBYSgABQUgwJSUIQKiEEBKSoCBYSgABQVgwJyUAQKCEEBKSgGBYSgABQQgwJSUAQKCEEBOCgGBeSgABUQgwJSUAQKCEEBKCgGBaSgCBUQgyJSUAwKCEEBKCAGBaSgCBUQgwJwUAwKSEEBKiAGBaSgCBUQggJQUIwKSEERKiAGBaSgCBUQggJQQIwKSEERKiAEBaCgGBWQgiJwQAwKSEERKCAEBaCAEBWQgiJQQIwKQFERKCBERaCAEBWQoiJQQAgKQEEhKCBFBaCIGBWQoiJQQIgKQAEhKCAFBaCAGBSAgiJQQAoKQAEhKCAFBeCAGBSAokJQQIoKwAEhKAAFBaCAEBSAAkJQQAoKwAExKABFBaCAFBSAAkJQAAoKQAExKAAFhaCAFBSAAkJQAAoKQAExKAAFhKAAFBSAAkJQAAoKQAEpKAAFhKAAFBSBAkJQAAoKQQEpKAAFhKAAFBSAAkJQAAoIQQEoKAAFhKAAFBSAAlJQAAoIQQEoKAIFhKAAFBCCIlBQAAoIQREoKABFpKAAFBCColBQBAoIQQEoKABFoKAAFBCCIlBQBIpIQQEoIARFoKAAFBCCAlBQAIpAQQEoIARFoaAIFJGCAlBQAIpAQQEoIARFoKAIFIGCAlBACIpCQREoIAQFoKAAFIGCAlBECIpCQREoIgUFoKgAFIWCAlBACApAQREoAgUFoIgQHIWCIlBECgpAUREoCgUFoIgQFIGCIlBECgpAEQEoCgUFoIgQFIGCIlAUCgpAEQEoAgVFoIgUFIAiIlAUCgpAEQEoAgVFoCgUFIAiA1AUCopAUSkoAkVEoCgUFIAiAlAEiopAUSkoAkVEoCgUFIEiAlAEiohAUSgoAkUEoAgUFIGiElAEioxAUSgoAkUEoAgUEYGiEFAEighAUSgoAkUloAgUEYGiUFAEighAESgiAkUloAgUEYGiUFAEighAESgiAkUhoAgUEYAiUEQEigpAESgiAkWhoAgUEYAiUEQEikJAESgiAkWhiAgUEYAiUEQEikJAESgiAkWgiAgUBYAiUEQEikIRESgiAkWgiAgUhaAiUEQEikARESgqQEWgiAgchaAiUEQEikARESgKQEWgiAgUgSIiUESEikARESgKQUWgiAgUgSIiUBSAikARESgKRUWgiAgVgSIiUBSAikARETgCRUSgKAgVgSIiUBSCikARESoCRUSgKAgVgSIiUASKiEBRECoCRUSgKAAVgSIiVASKiEBRECoCRUSgKBQVgSIgVASKiEBRECoCRUCgCBQRgaIgVASKiEBRACoCRUCoCBQRgaIgVASKgEARKCICRUCoCBQBgaIgVASKgFARKCICRUGoCBQBgSJwRASKgFARKAICRUGoCBQBgSJQRASKgFARKAICRUCICBQBoSJQBASKgFARKAICReCICBQBoSJQBASKgBARKAJCRaCICBQBoSJQBASKgBERKAJCRaAICBQBoSJQBASKwBERKAJCRaAICBQBISJQBISKQBEQKAJCRaAICBQBIyJQBISKQBEQKAJCRKAICBSBIiJQBISKQBEQKAJGRKAICBWBIiBQBISIQBEQKAJGRKAICBWBIiBQBIyIQBEQKAJEQKAICBWBIiBQBIyIQBEQKgJFQKAICBGBIiBQBIyAQBEQKgJFQKAIGBGBIiBQBIiAQBEQIgJFQKAIGAGBIiBUBIqAQBEQIgJFQKAIEAGBIiBEBIqAQBEwAgJFQKAIEAGBIiBEBIqAQBEgAgJFQIgIFAGBImAEBIqAQBEgAgIFQIgIFAGBImAEBIqAABEgAgIFQAgIFAGBAkAEBAqAEBEoAgIFwAgIFAABIkAEBAqAEBEoAAIFgAgIFAABIkAEBAqAERAoAAIEgAgIFAAhIlAABAgAERAoAAIEgAgIFAAhIFAABAgAARAgAEJEgAAIEAAiIFAABAgAARAgAEIAoAAIAAACIEAABAgAARAgAAYAgAAIAAACIUAABAAAARAgAARAgAAIAAACIEAADAAAARAAAARAgAAIAAACIEAACAAAARAAAARCgAAIAAACIEAACIAAARAAAARAgAAQAAACIEAACIAAARAAAARAgAAQAAACIAAACIAAATAAAARAgAAQAAECIAAACIQAASAAAARAAAAQAAECQAAACAQAASAAAAQAAAAQCAACQAAACAQAACAAAAQAAAAQCAAAQAAACAAAACAQAACAAAAQAAAAQAAACAAAACAQAACAAAAQAAAAQAAAAAABACAQAACAAAAQAAAAQAAAAAABACAAAACAQAAAAAEAQCAAAAABACAAAACAQAAAAAIAQAAAAACBAAAAAgCAAAAAAAIAAAAEAACBAAAABACAAAAAAAIBAAAEAAABAAAAAACAAAAAAAIBAAAEAAABAAAABAIAAAgAAAIAAAAAAAABAAAABAIAAAAAAAIAAAAIBAAAAAAABAAAAAAIAAIAAAAIBAAAAAAABAAAABAIAAIAAAAIAAAAABAABAAAABAIAAAAAAAIAAAAIBAAAAAAABAAAAAAIAAIAAAAIBAAAAAAABAAAABAIAAAAAAAIAAAAAAAABAAAABAIAAAAAAAIAAAAAAAABAAAABAAAAAAAAAIAAAAIAAABAAAABAAAAAAAAAIAAAAIAAAAAAAABAAAAAAAEAIAAAAIAAAAAAAABAAAAAAAEAAAAAAIAAAAAAAgDAAAAAAAEAAAAAAIAAAAAAAgAAAAAAAAEAAAAAAIAAAAAAAgAAAAAAAAEAAAAEAAAAAAAAAgAAAAAAAAEAAAAEAAAAABAAAgAAAAAAAAAAAAAEAAAAAAAAAgAAAAgAAAAAIAAEAAAAAAAAAgAAAAgAAAAAAAAEAAAAAAAAAAAAAAgAAAAAAAAEAAAAAAAAAAAAAAgAAAAAAAAEAAAAEAAAAAAAAAgAAAAAAAAEAAAAEAAAAAAAAAgAAAAAAAAEAAAAEAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const N = 48000;
+    const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+    const bits = atob(LAND_BITS);
+    const land = []; // x, y, z de cada punto de tierra (esfera unitaria)
+    for (let i = 0; i < N; i += 1) {
+      if (!(bits.charCodeAt(i >> 3) & (1 << (i & 7)))) continue;
+      const y = 1 - ((i + 0.5) * 2) / N;
+      const r = Math.sqrt(1 - y * y);
+      land.push(r * Math.sin(i * GOLDEN), y, r * Math.cos(i * GOLDEN));
+    }
+
+    const rad = (d) => (d * Math.PI) / 180;
+    const toVec = ([lat, lng]) => [
+      Math.cos(rad(lat)) * Math.sin(rad(lng)),
+      Math.sin(rad(lat)),
+      Math.cos(rad(lat)) * Math.cos(rad(lng)),
+    ];
+
+    // Ciudades (lat, lng). La primera es Bogotá: el nodo principal.
+    const CITIES = [
+      [4.71, -74.07], // 0 Bogotá
+      [25.76, -80.19], // 1 Miami
+      [19.43, -99.13], // 2 Ciudad de México
+      [40.71, -74.0], // 3 Nueva York
+      [34.05, -118.24], // 4 Los Ángeles
+      [43.65, -79.38], // 5 Toronto
+      [-12.05, -77.04], // 6 Lima
+      [-33.45, -70.67], // 7 Santiago
+      [-34.6, -58.38], // 8 Buenos Aires
+      [-23.55, -46.63], // 9 São Paulo
+      [8.98, -79.52], // 10 Panamá
+      [40.42, -3.7], // 11 Madrid
+      [51.5, -0.13], // 12 Londres
+      [6.52, 3.38], // 13 Lagos
+      [-33.92, 18.42], // 14 Ciudad del Cabo
+      [25.2, 55.27], // 15 Dubái
+      [19.07, 72.88], // 16 Bombay
+      [1.35, 103.82], // 17 Singapur
+      [35.68, 139.69], // 18 Tokio
+      [-33.87, 151.21], // 19 Sídney
+    ].map(toVec);
+
+    const LINKS = [
+      [0, 1], [0, 2], [0, 3], [0, 6], [0, 9], [0, 11], [0, 10], [0, 7],
+      [1, 2], [1, 3], [3, 5], [4, 5], [2, 4], [6, 7], [7, 8], [8, 9],
+      [3, 12], [12, 11], [11, 13], [13, 14], [9, 14], [12, 15], [15, 16],
+      [16, 17], [17, 18], [17, 19], [18, 4],
+    ];
+
+    // Cada ruta es un arco de círculo máximo que se eleva sobre la superficie
+    const ARC_STEPS = 32;
+    const arcs = LINKS.map(([a, b], k) => {
+      const A = CITIES[a];
+      const B = CITIES[b];
+      const dot = Math.min(1, Math.max(-1, A[0] * B[0] + A[1] * B[1] + A[2] * B[2]));
+      const w = Math.acos(dot);
+      const lift = 0.05 + 0.14 * (w / Math.PI);
+      const pts = new Float32Array((ARC_STEPS + 1) * 3);
+      for (let i = 0; i <= ARC_STEPS; i += 1) {
+        const t = i / ARC_STEPS;
+        const s1 = Math.sin((1 - t) * w) / Math.sin(w);
+        const s2 = Math.sin(t * w) / Math.sin(w);
+        const h = 1 + Math.sin(Math.PI * t) * lift;
+        for (let c = 0; c < 3; c += 1) pts[i * 3 + c] = (s1 * A[c] + s2 * B[c]) * h;
+      }
+      // Pulso que recorre la ruta: velocidad y desfase propios
+      return { pts, speed: 0.07 + ((k * 37) % 11) * 0.006, phase: ((k * 53) % 17) / 17 };
+    });
+
+    // Malla: nodos repartidos por la esfera, cada uno unido a sus 3 vecinos más
+    // cercanos con tramos de círculo máximo pegados a la superficie
+    const MESH_NODES = 120;
+    const MESH_STEPS = 8;
+    const meshNodes = Array.from({ length: MESH_NODES }, (_, i) => {
+      const y = 1 - ((i + 0.5) * 2) / MESH_NODES;
+      const r = Math.sqrt(1 - y * y);
+      // Un pequeño desorden para que no se vea como una rejilla
+      const a = i * GOLDEN + Math.sin(i * 12.9898) * 0.35;
+      return [r * Math.sin(a), y, r * Math.cos(a)];
+    });
+    const meshEdges = [];
+    const seen = new Set();
+    meshNodes.forEach((A, i) => {
+      meshNodes
+        .map((B, j) => ({ j, d: A[0] * B[0] + A[1] * B[1] + A[2] * B[2] }))
+        .filter(({ j }) => j !== i)
+        .sort((a, b) => b.d - a.d)
+        .slice(0, 3)
+        .forEach(({ j }) => {
+          const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          const B = meshNodes[j];
+          const pts = new Float32Array((MESH_STEPS + 1) * 3);
+          for (let k = 0; k <= MESH_STEPS; k += 1) {
+            const t = k / MESH_STEPS;
+            const x = A[0] + (B[0] - A[0]) * t;
+            const y = A[1] + (B[1] - A[1]) * t;
+            const z = A[2] + (B[2] - A[2]) * t;
+            const len = Math.hypot(x, y, z) || 1;
+            pts[k * 3] = x / len;
+            pts[k * 3 + 1] = y / len;
+            pts[k * 3 + 2] = z / len;
+          }
+          meshEdges.push(pts);
         });
-        return;
+    });
+
+    // Halo de partículas en el plano de la pantalla, más denso cerca del borde.
+    // Solo recorren el cuarto que asoma (el resto del círculo queda fuera de pantalla).
+    const HALO_FROM = -0.45;
+    const HALO_SPAN = Math.PI / 2 + 0.9;
+    const particles = Array.from({ length: 320 }, (_, i) => {
+      const u = (i * 0.618034) % 1;
+      return {
+        angle: ((i * 0.7548776) % 1) * HALO_SPAN,
+        dist: 1.02 + Math.pow((i * 0.3819) % 1, 2.2) * 0.5,
+        spin: (0.012 + u * 0.03) * (i % 5 === 0 ? -1 : 1),
+        size: 0.5 + ((i * 0.7548) % 1) * 1.3,
+        twinkle: 0.6 + u * 1.8,
+        phase: i * 1.7,
+        tone: i % 7 === 0 ? '0, 224, 239' : i % 3 === 0 ? '255, 255, 255' : '150, 200, 255',
+      };
+    });
+
+    // Vista: inclinación fija y giro de oeste a este
+    const TILT = -0.3;
+    const cT = Math.cos(TILT);
+    const sT = Math.sin(TILT);
+    const START = rad(98); // arranca con Bogotá en el centro del cuarto visible
+    const SPIN = 0.03; // rad/s: una vuelta cada ~3 min 30 s
+    const SCROLL_SPIN = 1.8; // rad extra al salir del hero: bajar hace girar el planeta
+    let scrollM = 0;
+
+    let W = 0;
+    let H = 0;
+    let R = 0;
+    let cx = 0;
+    let cy = 0;
+    let dpr = 1;
+    let base = null; // atmósfera + esfera, prerenderizadas
+    let glow = null; // sprite de brillo para nodos y pulsos
+
+    const makeGlow = () => {
+      const g = document.createElement('canvas');
+      const size = 64;
+      g.width = g.height = size;
+      const c = g.getContext('2d');
+      const grad = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      grad.addColorStop(0, 'rgba(210, 245, 255, 1)');
+      grad.addColorStop(0.18, 'rgba(90, 210, 255, 0.75)');
+      grad.addColorStop(0.5, 'rgba(47, 120, 255, 0.18)');
+      grad.addColorStop(1, 'rgba(47, 91, 255, 0)');
+      c.fillStyle = grad;
+      c.fillRect(0, 0, size, size);
+      return g;
+    };
+
+    const makeBase = () => {
+      const b = document.createElement('canvas');
+      b.width = canvas.width;
+      b.height = canvas.height;
+      const c = b.getContext('2d');
+      c.scale(dpr, dpr);
+
+      // Atmósfera: brillo azul que sale del borde
+      const atm = c.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.34);
+      atm.addColorStop(0, 'rgba(47, 110, 255, 0.5)');
+      atm.addColorStop(0.2, 'rgba(47, 100, 255, 0.22)');
+      atm.addColorStop(0.55, 'rgba(47, 91, 255, 0.06)');
+      atm.addColorStop(1, 'rgba(47, 91, 255, 0)');
+      c.fillStyle = atm;
+      c.fillRect(0, 0, W, H);
+
+      // Esfera: azul noche, más clara hacia arriba a la derecha (donde está la aurora)
+      const body = c.createRadialGradient(cx + R * 0.45, cy - R * 0.45, R * 0.05, cx, cy, R);
+      body.addColorStop(0, '#1A2F6B');
+      body.addColorStop(0.55, '#0E1A40');
+      body.addColorStop(1, '#080D22');
+      c.beginPath();
+      c.arc(cx, cy, R, 0, Math.PI * 2);
+      c.fillStyle = body;
+      c.fill();
+
+      // Luz de borde
+      const rim = c.createRadialGradient(cx, cy, R * 0.82, cx, cy, R);
+      rim.addColorStop(0, 'rgba(60, 140, 255, 0)');
+      rim.addColorStop(1, 'rgba(80, 170, 255, 0.28)');
+      c.fillStyle = rim;
+      c.fill();
+      c.lineWidth = 1;
+      c.strokeStyle = 'rgba(140, 200, 255, 0.35)';
+      c.stroke();
+      return b;
+    };
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+      W = rect.width;
+      H = rect.height;
+      dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      R = H / 1.42;
+      cx = R * 0.16;
+      cy = H + R * 0.1;
+      base = makeBase();
+      glow = glow || makeGlow();
+      return true;
+    };
+
+    // Proyección: giro alrededor del eje polar y luego inclinación
+    const out = { x: 0, y: 0, z: 0 };
+    const project = (x, y, z, cR, sR) => {
+      const x1 = x * cR + z * sR;
+      const z1 = z * cR - x * sR;
+      out.x = x1;
+      out.y = y * cT - z1 * sT;
+      out.z = y * sT + z1 * cT;
+      return out;
+    };
+    // Visible si mira al frente o si, elevado, se asoma por fuera del disco
+    const visible = (p) => p.z > 0 || p.x * p.x + p.y * p.y > 1;
+
+    const LAND_ALPHA = [0.18, 0.38, 0.62, 0.9];
+    const landPaths = LAND_ALPHA.map(() => null);
+
+    const draw = (time) => {
+      const t = time / 1000;
+      scrollM += (heroScroll.m - scrollM) * 0.1;
+      const rot = START + (reduceMotion() ? 0 : t * SPIN + scrollM * SCROLL_SPIN);
+      const cR = Math.cos(rot);
+      const sR = Math.sin(rot);
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(base, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Órbitas: dos circunferencias finas alrededor del planeta
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(120, 180, 255, 0.16)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 1.14, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(120, 180, 255, 0.08)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 1.32, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Halo de partículas
+      for (const p of particles) {
+        const a = HALO_FROM + ((((p.angle + t * p.spin) % HALO_SPAN) + HALO_SPAN) % HALO_SPAN);
+        const x = cx + Math.cos(a) * p.dist * R;
+        const y = cy - Math.sin(a) * p.dist * R;
+        if (x < -4 || y < -4 || x > W + 4 || y > H + 4) continue;
+        const fade = 1 - (p.dist - 1.03) / 0.55;
+        const alpha = fade * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * p.twinkle + p.phase)));
+        ctx.fillStyle = `rgba(${p.tone}, ${alpha.toFixed(3)})`;
+        ctx.fillRect(x - p.size / 2, y - p.size / 2, p.size, p.size);
       }
 
-      // Ancho de un espacio en la fuente del título
-      const probe = document.createElement('span');
-      probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
-      title.appendChild(probe);
-      probe.textContent = 'a a';
-      const withSpace = probe.getBoundingClientRect().width;
-      probe.textContent = 'aa';
-      const space = withSpace - probe.getBoundingClientRect().width;
-      probe.remove();
+      // Continentes: puntos agrupados por brillo (más brillantes al frente)
+      const dot = Math.max(1.1, R * 0.0056);
+      for (let k = 0; k < landPaths.length; k += 1) landPaths[k] = new Path2D();
+      for (let i = 0; i < land.length; i += 3) {
+        const p = project(land[i], land[i + 1], land[i + 2], cR, sR);
+        if (p.z <= 0.02) continue;
+        const x = cx + p.x * R;
+        const y = cy - p.y * R;
+        if (x < 0 || y < 0 || x > W || y > H) continue;
+        const bucket = Math.min(3, Math.floor(p.z * 4.2));
+        landPaths[bucket].rect(x - dot / 2, y - dot / 2, dot, dot);
+      }
+      for (let k = 0; k < landPaths.length; k += 1) {
+        ctx.fillStyle = `rgba(70, 215, 255, ${LAND_ALPHA[k]})`;
+        ctx.fill(landPaths[k]);
+      }
 
-      // Posición de partida respecto al título. offsetLeft/Top ignoran translate
-      // y transform, pero se miden desde el offsetParent, que puede ser un bloque
-      // intermedio (p. ej. mientras corre su animación de entrada): se suman hasta el título.
-      const origin = (el) => {
-        let left = 0;
-        let top = 0;
-        while (el && el !== title) {
-          left += el.offsetLeft;
-          top += el.offsetTop;
-          el = el.offsetParent;
+      // Malla de red: muy tenue, más visible al frente
+      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = 'rgba(170, 215, 255, 0.13)';
+      ctx.beginPath();
+      for (const pts of meshEdges) {
+        let pen = false;
+        for (let k = 0; k <= MESH_STEPS; k += 1) {
+          const p = project(pts[k * 3], pts[k * 3 + 1], pts[k * 3 + 2], cR, sR);
+          if (p.z <= 0) {
+            pen = false;
+            continue;
+          }
+          const x = cx + p.x * R;
+          const y = cy - p.y * R;
+          if (pen) ctx.lineTo(x, y);
+          else ctx.moveTo(x, y);
+          pen = true;
         }
-        return { left, top };
-      };
+      }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(200, 235, 255, 0.55)';
+      for (const v of meshNodes) {
+        const p = project(v[0], v[1], v[2], cR, sR);
+        if (p.z <= 0.1) continue;
+        ctx.fillRect(cx + p.x * R - 1, cy - p.y * R - 1, 2, 2);
+      }
 
-      const widths = words.map((w) => w.offsetWidth);
-      const total = widths.reduce((a, b) => a + b, 0) + space * (words.length - 1);
-      let x = (title.clientWidth - total) / 2;
-      words.forEach((w, i) => {
-        const y = (title.clientHeight - w.offsetHeight) / 2;
-        const from = origin(w);
-        w.style.setProperty('--dx', `${x - from.left}px`);
-        w.style.setProperty('--dy', `${y - from.top}px`);
-        x += widths[i] + space;
+      // Rutas de red
+      ctx.lineWidth = 1;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(190, 230, 255, 0.3)';
+      ctx.beginPath();
+      for (const arc of arcs) {
+        let pen = false;
+        for (let i = 0; i <= ARC_STEPS; i += 1) {
+          const p = project(arc.pts[i * 3], arc.pts[i * 3 + 1], arc.pts[i * 3 + 2], cR, sR);
+          if (!visible(p)) {
+            pen = false;
+            continue;
+          }
+          const x = cx + p.x * R;
+          const y = cy - p.y * R;
+          if (pen) ctx.lineTo(x, y);
+          else ctx.moveTo(x, y);
+          pen = true;
+        }
+      }
+      ctx.stroke();
+
+      // Pulsos que recorren las rutas (con estela corta)
+      if (!reduceMotion()) {
+        for (const arc of arcs) {
+          const head = (t * arc.speed + arc.phase) % 1;
+          for (let s = 0; s < 6; s += 1) {
+            const f = head - s * 0.018;
+            if (f < 0) break;
+            const idx = f * ARC_STEPS;
+            const i0 = Math.floor(idx);
+            const i1 = Math.min(ARC_STEPS, i0 + 1);
+            const m = idx - i0;
+            const px = arc.pts[i0 * 3] * (1 - m) + arc.pts[i1 * 3] * m;
+            const py = arc.pts[i0 * 3 + 1] * (1 - m) + arc.pts[i1 * 3 + 1] * m;
+            const pz = arc.pts[i0 * 3 + 2] * (1 - m) + arc.pts[i1 * 3 + 2] * m;
+            const p = project(px, py, pz, cR, sR);
+            if (!visible(p)) break;
+            const size = (s === 0 ? 11 : 7) * (1 - s / 7);
+            ctx.globalAlpha = s === 0 ? 0.95 : 0.5 * (1 - s / 6);
+            ctx.drawImage(glow, cx + p.x * R - size / 2, cy - p.y * R - size / 2, size, size);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Nodos: brillo suave y un punto blanco; Bogotá con un anillo que late
+      CITIES.forEach((v, i) => {
+        const p = project(v[0], v[1], v[2], cR, sR);
+        if (p.z <= 0) return;
+        const x = cx + p.x * R;
+        const y = cy - p.y * R;
+        const main = i === 0;
+        const size = main ? 26 : 14;
+        ctx.globalAlpha = 0.5 + 0.5 * p.z;
+        ctx.drawImage(glow, x - size / 2, y - size / 2, size, size);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x - 1, y - 1, 2, 2);
+        if (main) {
+          const k = reduceMotion() ? 0.35 : (t / 2.4) % 1;
+          ctx.globalAlpha = (1 - k) * 0.8 * p.z;
+          ctx.strokeStyle = '#00E0EF';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(x, y, 4 + k * 16, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
       });
     };
 
-    layout();
-    document.fonts?.ready.then(layout);
-    if ('ResizeObserver' in window) new ResizeObserver(layout).observe(title);
-    else window.addEventListener('resize', layout);
+    let running = false;
+    let frame = 0;
+    let last = 0;
+    const loop = (now) => {
+      last = now;
+      draw(now);
+      frame = running ? requestAnimationFrame(loop) : 0;
+    };
+    const start = () => {
+      if (running || reduceMotion()) return;
+      running = true;
+      frame = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(frame);
+      frame = 0;
+    };
+
+    if (!resize()) return;
+    draw(0);
+    requestAnimationFrame(() => canvas.classList.add('is-ready'));
+
+    if ('ResizeObserver' in window) {
+      new ResizeObserver(() => {
+        if (resize()) draw(last);
+      }).observe(canvas);
+    } else {
+      window.addEventListener('resize', () => {
+        if (resize()) draw(last);
+      });
+    }
+
+    prefersReducedMotion.addEventListener('change', () => {
+      if (reduceMotion()) {
+        stop();
+        draw(0);
+      } else start();
+    });
+
+    if (hasIO) {
+      new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) start();
+        else stop();
+      }).observe(canvas);
+    } else {
+      start();
+    }
+  }
+
+  /* ---------- Hero: progreso de salida ----------
+     Escribe --m en .hero (0 = arriba del todo, 1 = hero fuera de pantalla):
+     el CSS lo usa para el parallax del logo, las estrellas y el planeta, y
+     para apagar la aurora, los fragmentos de código y el indicador de scroll.
+     También queda en heroScroll: la aurora se estrecha y el planeta gira. Con movimiento reducido
+     no se escribe y todo queda fijo. */
+  function initHeroScroll() {
+    const hero = document.getElementById('inicio');
+    if (!hero) return;
+    let ticking = false;
+    let last = -1;
+
+    const update = () => {
+      ticking = false;
+      if (reduceMotion()) {
+        heroScroll.m = 0;
+        if (last !== 0) hero.style.setProperty('--m', (last = 0));
+        return;
+      }
+      const rect = hero.getBoundingClientRect();
+      const m = Math.round(Math.min(1, Math.max(0, -rect.top / rect.height)) * 1000) / 1000;
+      heroScroll.m = m;
+      if (m !== last) hero.style.setProperty('--m', (last = m));
+    };
+    const request = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request);
+    prefersReducedMotion.addEventListener('change', update);
+  }
+
+  /* ---------- Navegación: la firma de la barra cede el sitio al logo del hero ----------
+     Mientras el logo grande del hero se ve, la firma pequeña de la barra se
+     cambia por el isotipo V en contorno (no se repite la marca completa dos
+     veces en la misma pantalla). */
+  function initNavBrand() {
+    const nav = document.getElementById('nav');
+    const logo = document.querySelector('.hero__logo');
+    if (!nav || !logo || !hasIO) return;
+    const navH = nav.querySelector('.nav__inner')?.offsetHeight || 72;
+    new IntersectionObserver(
+      ([entry]) => nav.classList.toggle('is-hero-brand', entry.isIntersecting),
+      { rootMargin: `-${navH}px 0px 0px 0px` }
+    ).observe(logo);
+  }
+
+  /* ---------- Hero: fragmentos de pseudocódigo en los vacíos ----------
+     Dos huecos simétricos, a cada lado entre la navegación y el logo (abajo
+     están el planeta y el avatar). Salen de a dos, uno a cada lado; la
+     siguiente pareja espera a que terminen ambos. Cada fragmento se escribe, se queda y se va. */
+  function initHeroCode() {
+    const layer = document.querySelector('.hero__code');
+    const hero = document.getElementById('inicio');
+    if (!layer || !hero) return;
+    const inner = hero.querySelector('.hero__inner');
+    const logo = hero.querySelector('.hero__logo');
+    if (!inner || !logo) return;
+
+    // Pseudocódigo en español que un cliente entienda (líneas cortas)
+    const SNIPPETS = [
+      "if (pyme.necesita('web')) {\n  volt.construir();\n}",
+      "await tareas.automatizar();\n// más tiempo para vender",
+      "const app = volt.crear({\n  medida: 'tu negocio',\n});",
+      "cliente.ventas++;\nsoporte.cercano = true;",
+      "// de la idea a la web\nproyecto.lanzar();",
+      "function crecer(pyme) {\n  return pyme.digital();\n}",
+    ];
+
+    const TYPE_MS = 26;
+    const HOLD_MS = 3600;
+    const FADE_MS = 700;
+    const GAP_MS = 900;
+    const LINE_H = 11.5 * 1.6;
+
+    // Resaltado mínimo: comentarios, cadenas, palabras clave y llamadas
+    const TOKEN = /(\/\/.*$)|('[^']*')|\b(if|const|await|return|function|true)\b|([A-Za-z_]\w*)(?=\()/gm;
+    const tokenize = (code) => {
+      const out = [];
+      let last = 0;
+      code.replace(TOKEN, (match, comment, str, kw, fn, offset) => {
+        if (offset > last) out.push({ cls: '', text: code.slice(last, offset) });
+        const cls = comment ? 'tk-c' : str ? 'tk-s' : kw ? 'tk-k' : 'tk-f';
+        out.push({ cls, text: match });
+        last = offset + match.length;
+        return match;
+      });
+      if (last < code.length) out.push({ cls: '', text: code.slice(last) });
+      return out;
+    };
+
+    const active = () =>
+      document.visibilityState === 'visible' &&
+      getComputedStyle(layer).display !== 'none' &&
+      parseFloat(getComputedStyle(hero).getPropertyValue('--m') || 0) < 0.15 &&
+      hero.getBoundingClientRect().bottom > 0;
+
+    // Posición de un hueco (entre la navegación y el logo), relativa a la capa
+    // que cubre el escenario del hero
+    const place = (el, slot, lines) => {
+      const base = layer.getBoundingClientRect();
+      const box = inner.getBoundingClientRect();
+      const l = logo.getBoundingClientRect();
+      const h = lines * LINE_H;
+      const left = slot === 'l';
+      el.style.top = `${(box.top + l.top) / 2 - h / 2 - base.top}px`;
+      el.style.left = left ? `${box.left - base.left}px` : 'auto';
+      el.style.right = left ? 'auto' : `${base.right - box.right}px`;
+      // Espacio disponible: medio contenedor (ninguno si no cabe en alto sin rozar el logo)
+      return l.top - box.top >= h + 32 ? box.width / 2 - 24 : 0;
+    };
+
+    const show = (slot, code, done) => {
+      const el = document.createElement('pre');
+      el.className = 'hero__snippet';
+      layer.appendChild(el);
+      const room = place(el, slot, code.split('\n').length);
+
+      const tokens = tokenize(code).map(({ cls, text }) => {
+        const span = document.createElement('span');
+        if (cls) span.className = cls;
+        span.textContent = text;
+        el.appendChild(span);
+        return { span, text };
+      });
+      // Se mide completo antes de escribirlo: si no cabe, se salta este turno
+      if (el.scrollWidth > room) {
+        el.remove();
+        return setTimeout(done, GAP_MS);
+      }
+      tokens.forEach(({ span }) => { span.textContent = ''; });
+      const caret = document.createElement('span');
+      caret.className = 'hero__snippet-caret';
+      el.appendChild(caret);
+      // La medición de arriba ya calculó el estado inicial: la transición arranca sin esperar un frame
+      el.classList.add('is-on');
+
+      const finish = () => {
+        setTimeout(() => {
+          el.classList.remove('is-on');
+          setTimeout(() => {
+            el.remove();
+            setTimeout(done, GAP_MS);
+          }, FADE_MS);
+        }, HOLD_MS);
+      };
+
+      if (reduceMotion()) {
+        tokens.forEach(({ span, text }) => { span.textContent = text; });
+        caret.remove();
+        return finish();
+      }
+
+      let ti = 0;
+      let ci = 0;
+      const type = () => {
+        const tok = tokens[ti];
+        ci += 1;
+        tok.span.textContent = tok.text.slice(0, ci);
+        if (ci >= tok.text.length) {
+          ti += 1;
+          ci = 0;
+        }
+        if (ti < tokens.length) setTimeout(type, TYPE_MS);
+        else {
+          caret.remove();
+          finish();
+        }
+      };
+      setTimeout(type, 200);
+    };
+
+    // Parejas simétricas, alternando cuál lado empieza
+    const PAIRS = [['l', 'r'], ['r', 'l']];
+    let turn = 0;
+    let index = 0;
+    const next = () => {
+      if (!active()) return setTimeout(next, 1500);
+      const [a, b] = PAIRS[turn % PAIRS.length];
+      turn += 1;
+      let pending = 2;
+      const done = () => {
+        pending -= 1;
+        if (!pending) next();
+      };
+      show(a, SNIPPETS[index % SNIPPETS.length], done);
+      // El segundo arranca un poco después: se sienten independientes
+      const second = SNIPPETS[(index + 1) % SNIPPETS.length];
+      setTimeout(() => show(b, second, done), 700);
+      index += 2;
+    };
+    setTimeout(next, 1800);
+  }
+
+  /* ---------- Avatar flotante: mira hacia el cursor ----------
+     Los ojos se desplazan dentro del visor y la cabeza se inclina un poco hacia
+     el cursor, con suavizado. El bucle de animación solo corre mientras se
+     mueve; además parpadea cada pocos segundos. */
+  function initBuddy() {
+    const buddy = document.querySelector('.buddy');
+    if (!buddy) return;
+    const head = buddy.querySelector('.buddy__head');
+    const eyes = buddy.querySelector('.buddy__eyes');
+    if (!head || !eyes) return;
+
+    // Recorridos máximos (unidades del viewBox de 64)
+    const EYE_X = 3.2;
+    const EYE_Y = 2.6;
+    const HEAD_X = 1.6;
+    const HEAD_Y = 1.2;
+    const TILT = 6; // grados
+    // A partir de esta distancia (px) la mirada llega a su tope
+    const REACH = 260;
+
+    const target = { x: 0, y: 0 };
+    const current = { x: 0, y: 0 };
+    let frame = 0;
+
+    const apply = () => {
+      const { x, y } = current;
+      eyes.setAttribute('transform', `translate(${(x * EYE_X).toFixed(2)} ${(y * EYE_Y).toFixed(2)})`);
+      head.setAttribute(
+        'transform',
+        `translate(${(x * HEAD_X).toFixed(2)} ${(y * HEAD_Y).toFixed(2)}) rotate(${(x * TILT).toFixed(2)} 32 32)`
+      );
+    };
+
+    const tick = () => {
+      current.x += (target.x - current.x) * 0.18;
+      current.y += (target.y - current.y) * 0.18;
+      const settled = Math.abs(target.x - current.x) < 0.002 && Math.abs(target.y - current.y) < 0.002;
+      if (settled) {
+        current.x = target.x;
+        current.y = target.y;
+      }
+      apply();
+      frame = settled ? 0 : requestAnimationFrame(tick);
+    };
+
+    const kick = () => {
+      if (reduceMotion()) {
+        current.x = target.x;
+        current.y = target.y;
+        apply();
+      } else if (!frame) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    const lookAt = (clientX, clientY) => {
+      const rect = buddy.getBoundingClientRect();
+      const dx = clientX - (rect.left + rect.width / 2);
+      const dy = clientY - (rect.top + rect.height / 2);
+      const dist = Math.hypot(dx, dy) || 1;
+      const reach = Math.min(1, dist / REACH);
+      target.x = (dx / dist) * reach;
+      target.y = (dy / dist) * reach;
+      kick();
+    };
+
+    window.addEventListener('pointermove', (e) => lookAt(e.clientX, e.clientY), { passive: true });
+    // Si el cursor sale de la ventana, vuelve a mirar al frente
+    document.addEventListener('mouseout', (e) => {
+      if (e.relatedTarget) return;
+      target.x = 0;
+      target.y = 0;
+      kick();
+    });
+
+    const blink = () => {
+      if (!reduceMotion() && document.visibilityState === 'visible') {
+        buddy.classList.add('is-blinking');
+        setTimeout(() => buddy.classList.remove('is-blinking'), 130);
+      }
+      setTimeout(blink, 2600 + Math.random() * 3800);
+    };
+    setTimeout(blink, 2200);
+
+    initBuddyTalk(buddy);
+  }
+
+  /* ---------- Avatar: comentarios con llamados a la acción ----------
+     Cada cierto tiempo el avatar dice un mensaje según la sección visible,
+     escrito letra por letra como en un videojuego. Clic en el globo: lleva al
+     destino del mensaje. Clic en el avatar: siguiente mensaje. La x lo calla
+     un buen rato. No habla con la pestaña oculta ni con el menú móvil abierto. */
+  function initBuddyTalk(buddy) {
+    const bubble = buddy.querySelector('.buddy__bubble');
+    const typedEl = buddy.querySelector('.buddy__typed');
+    const ghostEl = buddy.querySelector('.buddy__ghost');
+    const closeBtn = buddy.querySelector('.buddy__close');
+    if (!bubble || !typedEl || !ghostEl) return;
+
+    const whatsapp = document.querySelector('[data-whatsapp]')?.href || '#contacto';
+
+    // Mensajes por sección (id). Edita o agrega libremente: text + href.
+    const MESSAGES = {
+      inicio: [
+        { text: '¿Tienes una idea para tu negocio? ¡Hagámosla realidad!', href: '#contacto' },
+        { text: 'Hola. ¿Cotizamos tu web, app o software?', href: '#contacto' },
+      ],
+      servicios: [
+        { text: 'Webs, apps y software a tu medida. ¿Cuál necesitas?', href: '#contacto' },
+        { text: '¿Tareas repetitivas? Las automatizamos por ti.', href: '#contacto' },
+      ],
+      proceso: [{ text: 'Te acompañamos en cada paso, sin tecnicismos.', href: '#contacto' }],
+      proyectos: [{ text: '¿Te imaginas tu negocio aquí? Hablemos.', href: '#contacto' }],
+      nosotros: [{ text: 'Estamos en Bogotá, Tocaima y Girardot. ¡Cerca de ti!', href: whatsapp }],
+      preguntas: [{ text: '¿Te quedó otra duda? Escríbenos por WhatsApp.', href: whatsapp }],
+      contacto: [{ text: '¡Casi listo! Cuéntanos tu idea en el formulario.', href: '#contacto' }],
+    };
+    const FALLBACK = MESSAGES.inicio;
+
+    const FIRST_DELAY = 5000;
+    const GAP_MIN = 22000;
+    const GAP_RANGE = 8000;
+    const SNOOZE = 120000; // tras cerrar con la x
+    const TYPE_MS = 34;
+
+    const nav = document.getElementById('nav');
+    const sections = [...document.querySelectorAll('main section[id]')];
+    const turn = {};
+    let current = null;
+    let typing = 0;
+    let hideTimer = 0;
+    let nextTimer = 0;
+    let hovering = false;
+
+    // Sección que ocupa el centro de la pantalla
+    const activeSection = () => {
+      const mid = window.innerHeight / 2;
+      const hit = sections.find((s) => {
+        const r = s.getBoundingClientRect();
+        return r.top <= mid && r.bottom >= mid;
+      });
+      return hit?.id;
+    };
+
+    const pickMessage = () => {
+      const id = activeSection();
+      const pool = MESSAGES[id] || FALLBACK;
+      const key = MESSAGES[id] ? id : 'inicio';
+      const i = turn[key] || 0;
+      turn[key] = (i + 1) % pool.length;
+      return pool[i];
+    };
+
+    const schedule = (delay) => {
+      clearTimeout(nextTimer);
+      nextTimer = setTimeout(speak, delay);
+    };
+
+    const hide = () => {
+      clearTimeout(typing);
+      clearTimeout(hideTimer);
+      bubble.classList.remove('is-visible');
+      buddy.classList.remove('is-talking');
+      current = null;
+    };
+
+    const armHide = (text) => {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (hovering) return armHide(text);
+        hide();
+        schedule(GAP_MIN + Math.random() * GAP_RANGE);
+      }, 3800 + text.length * 45);
+    };
+
+    function speak() {
+      clearTimeout(nextTimer); // por si se llama antes de tiempo (clic en el avatar)
+      const busy = document.visibilityState !== 'visible' || nav?.classList.contains('is-open');
+      if (busy) return schedule(8000);
+
+      hide();
+      current = pickMessage();
+      const { text } = current;
+      typedEl.textContent = '';
+      ghostEl.textContent = text;
+      bubble.classList.add('is-visible');
+      buddy.classList.add('is-talking');
+
+      if (reduceMotion()) {
+        typedEl.textContent = text;
+        ghostEl.textContent = '';
+        buddy.classList.remove('is-talking');
+        armHide(text);
+        return;
+      }
+
+      // Escritura letra por letra
+      let n = 0;
+      const type = () => {
+        n += 1;
+        typedEl.textContent = text.slice(0, n);
+        ghostEl.textContent = text.slice(n);
+        if (n < text.length) typing = setTimeout(type, TYPE_MS);
+        else {
+          buddy.classList.remove('is-talking');
+          armHide(text);
+        }
+      };
+      typing = setTimeout(type, 120);
+    }
+
+    const go = (href) => {
+      if (href.startsWith('#')) {
+        document.querySelector(href)?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth' });
+      } else {
+        window.open(href, '_blank', 'noopener');
+      }
+    };
+
+    bubble.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (e.target === closeBtn) {
+        hide();
+        schedule(SNOOZE);
+        return;
+      }
+      if (current) go(current.href);
+      hide();
+      schedule(GAP_MIN + Math.random() * GAP_RANGE);
+    });
+    bubble.addEventListener('pointerenter', () => { hovering = true; });
+    bubble.addEventListener('pointerleave', () => { hovering = false; });
+
+    // Clic en el avatar: siguiente mensaje ya
+    buddy.addEventListener('click', () => speak());
+
+    schedule(FIRST_DELAY);
   }
 
   /* ---------- Hero: contadores de estadísticas ---------- */
@@ -746,9 +1408,215 @@
     });
   }
 
+  /* ---------- Proceso: título que se disuelve + línea de tiempo con scroll ----------
+     Adaptación sin dependencias de "Timeline" (Hyperiux Vault, GSAP +
+     ScrollTrigger + SplitText). En escritorio .timeline__pin se fija (sticky)
+     y su alto marca el recorrido, que tiene tres fases en la misma escena:
+       1. El título se disuelve letra a letra (--out).
+       2. La línea de tiempo aparece en ese espacio (--tin) y su línea empieza
+          a dibujarse desde el inicio del riel hasta el 80% del ancho.
+       3. La pista se desliza a la izquierda; al final la línea completa el riel.
+     Cada hito se revela (--r: tallo, icono y texto) cuando la cabeza de la
+     línea lo alcanza. El scroll se sigue con un suavizado corto.
+     Móvil y movimiento reducido: título arriba y línea vertical; la línea y
+     los hitos se revelan al entrar en pantalla (con movimiento reducido, todo
+     visible y el título entero). */
+  function initTimeline() {
+    const section = document.querySelector('[data-timeline]');
+    if (!section) return;
+    const pin = section.querySelector('.timeline__pin');
+    const intro = section.querySelector('.timeline__intro');
+    const title = section.querySelector('.timeline__title');
+    const track = section.querySelector('.timeline__track');
+    const rail = section.querySelector('.timeline__rail');
+    const items = [...section.querySelectorAll('.milestone')];
+    if (!pin || !track || !rail || !items.length) return;
+
+    items.forEach((el, i) => el.style.setProperty('--i', i));
+
+    // Título en letras: palabras que no se parten y letras con un orden de
+    // salida desordenado (--k); el texto completo queda para lectores de pantalla
+    if (title) {
+      const text = title.textContent.trim();
+      const letters = text.replace(/\s+/g, '').length;
+      const order = Array.from({ length: letters }, (_, i) => (i * 7 + 3) % letters);
+      let k = 0;
+      const sr = document.createElement('span');
+      sr.className = 'timeline__sr';
+      sr.textContent = text;
+      const visual = document.createElement('span');
+      visual.setAttribute('aria-hidden', 'true');
+      text.split(/\s+/).forEach((word, w) => {
+        if (w) visual.append(' ');
+        const wordEl = document.createElement('span');
+        wordEl.className = 'timeline__word';
+        [...word].forEach((ch) => {
+          const c = document.createElement('span');
+          c.className = 'timeline__char';
+          c.textContent = ch;
+          c.style.setProperty('--k', order[k]);
+          k += 1;
+          wordEl.append(c);
+        });
+        visual.append(wordEl);
+      });
+      title.style.setProperty('--n', letters);
+      title.replaceChildren(sr, visual);
+    }
+
+    const wide = window.matchMedia('(min-width: 961px) and (min-height: 560px)');
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+    let horizontal = false;
+    let travel = 0; // px que se desliza la pista
+    let dOut = 0; // px de scroll para disolver el título
+    let dIn = 0; // px de scroll para que aparezca la línea de tiempo
+    let offsets = []; // posición de cada hito dentro de la pista (px)
+    let railLeft = 0;
+    let railWidth = 0;
+    let scrolled = 0; // px recorridos dentro de la escena fija (suavizado)
+    let running = false;
+    let frame = 0;
+    const last = { out: -1, tin: -1, line: -1, r: items.map(() => -1) };
+
+    const setVar = (key, name, v) => {
+      const value = Math.round(v * 1000) / 1000;
+      if (value !== last[key]) section.style.setProperty(name, (last[key] = value));
+    };
+    const setReveal = (i, v) => {
+      const r = Math.round(v * 1000) / 1000;
+      if (r !== last.r[i]) items[i].style.setProperty('--r', (last.r[i] = r));
+    };
+
+    // Recorrido dentro de la escena fija que corresponde al scroll actual
+    const currentScrolled = () => {
+      const rect = pin.getBoundingClientRect();
+      return Math.min(Math.max(-rect.top, 0), Math.max(0, rect.height - window.innerHeight));
+    };
+
+    const layout = () => {
+      horizontal = wide.matches && !reduceMotion();
+      section.classList.toggle('is-horizontal', horizontal);
+      track.style.transform = '';
+      pin.style.height = '';
+      if (horizontal) {
+        const vw = document.documentElement.clientWidth;
+        const vh = window.innerHeight;
+        travel = Math.max(0, track.scrollWidth - vw);
+        dOut = vh * 0.7;
+        dIn = vh * 0.5;
+        // Pantalla + disolver + aparecer + deslizar + una pausa al final para leer el último hito
+        pin.style.height = `${Math.round(vh + dOut + dIn + travel + vh * 0.35)}px`;
+        railLeft = rail.offsetLeft;
+        railWidth = rail.offsetWidth;
+        offsets = items.map((el) => railLeft + el.offsetLeft);
+      }
+      scrolled = horizontal ? currentScrolled() : 0;
+      apply();
+    };
+
+    const apply = () => {
+      if (reduceMotion() || !horizontal) {
+        setVar('out', '--out', 0);
+        setVar('tin', '--tin', 1);
+        intro?.classList.remove('is-gone');
+      }
+      if (reduceMotion()) {
+        setVar('line', '--line', 1);
+        items.forEach((_, i) => setReveal(i, 1));
+        return;
+      }
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+
+      if (horizontal) {
+        // Fases: disolver el título, luego (con un leve solape) aparece la línea de tiempo
+        const out = clamp01(scrolled / dOut);
+        const tin = clamp01((scrolled - dOut * 0.75) / dIn);
+        const p = travel ? clamp01((scrolled - dOut - dIn) / travel) : 1;
+        const x = -travel * p;
+        setVar('out', '--out', out);
+        setVar('tin', '--tin', tin);
+        intro?.classList.toggle('is-gone', out >= 1);
+        track.style.transform = `translate3d(${x.toFixed(2)}px, 0, 0)`;
+
+        // Cabeza de la línea: del inicio del riel al 80% mientras aparece; luego
+        // avanza hasta el 88% (fin del riel) al terminar el recorrido
+        const railScreen = railLeft + x;
+        const head = p > 0
+          ? vw * (0.8 + 0.08 * p)
+          : railScreen + (vw * 0.8 - railScreen) * tin;
+        setVar('line', '--line', clamp01((head - railScreen) / railWidth));
+        // Cada hito se revela a medida que la cabeza lo pasa
+        offsets.forEach((left, i) => setReveal(i, clamp01((head - (left + x)) / (vw * 0.14))));
+        return;
+      }
+
+      // Vertical: la línea se dibuja hasta el 75% del alto; cada hito entre el 92% y el 65%
+      const r = rail.getBoundingClientRect();
+      setVar('line', '--line', clamp01((vh * 0.75 - r.top) / r.height));
+      items.forEach((el, i) => {
+        const top = el.getBoundingClientRect().top;
+        setReveal(i, clamp01((vh * 0.92 - top) / (vh * 0.27)));
+      });
+    };
+
+    const loop = () => {
+      if (horizontal) {
+        const target = currentScrolled();
+        scrolled += (target - scrolled) * 0.14;
+        if (Math.abs(target - scrolled) < 0.3) scrolled = target;
+      }
+      apply();
+      frame = running ? requestAnimationFrame(loop) : 0;
+    };
+    const start = () => {
+      if (running || reduceMotion()) return;
+      running = true;
+      frame = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(frame);
+      frame = 0;
+    };
+
+    layout();
+    document.fonts?.ready.then(layout);
+
+    let resizeFrame = 0;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(layout);
+    });
+    wide.addEventListener('change', layout);
+    prefersReducedMotion.addEventListener('change', () => {
+      layout();
+      if (reduceMotion()) stop();
+    });
+
+    // Solo anima mientras la escena está cerca de la pantalla
+    if (hasIO) {
+      new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) start();
+          else {
+            // Al salir queda en su posición final (arriba o abajo de la sección)
+            stop();
+            if (horizontal) scrolled = currentScrolled();
+            apply();
+          }
+        },
+        { rootMargin: '20% 0px 20% 0px' }
+      ).observe(pin);
+    } else {
+      start();
+    }
+  }
+
   /* ---------- Aparición al entrar en pantalla ---------- */
   function initReveal() {
-    const items = document.querySelectorAll('.reveal, [data-steps]');
+    const items = document.querySelectorAll('.reveal');
     if (!items.length) return;
 
     if (!hasIO) {
@@ -958,8 +1826,13 @@
   initActiveLinks();
   initMobileMenu();
   initHeroAurora();
-  initHeroTitle();
+  initHeroGlobe();
+  initHeroScroll();
+  initNavBrand();
+  initHeroCode();
+  initBuddy();
   initCounters();
+  initTimeline();
   initReveal();
   initTabs();
   initFaq();

@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://images.unsplash.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Michroma&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&family=Michroma&family=Press+Start+2P&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
   <link rel="stylesheet" href="css/styles.css">
 
@@ -34,18 +34,28 @@
   <header class="nav" id="nav">
     <div class="container nav__inner">
       <a class="nav__brand" href="#inicio" aria-label="VOLT soluciones digitales, ir al inicio">
+        <!-- Isotipo en contorno: ocupa el sitio mientras el logo grande del hero está a la vista -->
+        <svg class="nav__iso" viewBox="0 0 201 181" aria-hidden="true" focusable="false">
+          <path d="M0,0 H46 L110,181 H65 Z"/>
+          <path d="M155,0 H201 L150,129 H105 Z"/>
+        </svg>
         <img src="img/volt-wordmark.png" alt="VOLT" width="480" height="108">
       </a>
 
       <nav class="nav__links" aria-label="Principal">
-        <a href="#servicios">Servicios</a>
         <a href="#proceso">Proceso</a>
+        <a href="#servicios">Servicios</a>
         <a href="#proyectos">Proyectos</a>
         <a href="#nosotros">Nosotros</a>
         <a href="#preguntas">Preguntas</a>
       </nav>
 
-      <a class="btn btn--primary btn--sm nav__cta" href="#contacto">Cotiza tu proyecto</a>
+      <!-- WhatsApp: cambia el número (con indicativo, sin + ni espacios) y el mensaje en el href.
+           data-whatsapp: el avatar usa este enlace en sus mensajes (js/main.js) -->
+      <a class="btn btn--secondary btn--sm nav__wa" data-whatsapp href="https://wa.me/573000000000?text=Hola%20VOLT%2C%20quiero%20cotizar%20un%20proyecto" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
+        <i class="ph ph-whatsapp-logo" aria-hidden="true"></i>
+        <span class="nav__wa-label" aria-hidden="true">WhatsApp</span>
+      </a>
 
       <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu-movil" aria-label="Abrir menú">
         <i class="ph ph-list" aria-hidden="true"></i>
@@ -54,8 +64,8 @@
 
     <div class="mobile-menu" id="menu-movil" hidden>
       <nav class="container mobile-menu__inner" aria-label="Menú móvil">
-        <a href="#servicios">Servicios</a>
         <a href="#proceso">Proceso</a>
+        <a href="#servicios">Servicios</a>
         <a href="#proyectos">Proyectos</a>
         <a href="#nosotros">Nosotros</a>
         <a href="#preguntas">Preguntas</a>
@@ -66,69 +76,163 @@
 
   <main id="main">
 
-    <!-- ============ HERO (aurora separadora arriba + título centrado que se junta) ============ -->
+    <!-- ============ HERO (logo VOLT protagonista sobre una aurora recta) ============ -->
     <section class="hero" id="inicio" aria-labelledby="hero-title">
-      <!-- Escena fija mientras se hace scroll: en ese recorrido la V se vuelve recta y el título se junta -->
       <div class="hero__stage">
-        <!-- Fondo: rejilla tenue y brillo que baja desde la V -->
+        <!-- Fondo: grano, rejilla tenue y brillo que sube desde abajo -->
         <div class="hero__bg" aria-hidden="true"></div>
+        <!-- Cielo de estrellas muy tenue (dos capas: una fija y otra que titila) -->
+        <div class="hero__stars" aria-hidden="true"></div>
 
         <!--
-          Aurora (WebGL): banda fina bajo la navegación que en el centro baja en una V pequeña.
-          Ajustes en data-* (ver initHeroAurora en js/main.js):
+          Aurora (WebGL): banda horizontal que pasa por detrás del logo y le sirve de fondo.
+          Su altura la marca .hero__band (centro de las letras VOLT). Ajustes en data-*
+          (ver initHeroAurora en js/main.js):
             color1 / color2     colores base de cada capa
             accent1 / accent2   color hacia el que viaja cada capa
-            band-width          grosor de la banda (1 = original, menos = más fina)
+            band-width          grosor de la banda (1 = original, más = más gruesa)
             mouse-influence(-y) reacción horizontal / vertical al mouse
-            v-calm              ondulación cerca de la V (1 = igual que el original)
-            flat-level          altura de la aurora recta: 0 = arriba de la V, 1 = vértice
-            shift-y             sube toda la aurora (fracción del alto; en CSS: --v-shift-y)
         -->
         <div class="hero__aurora" aria-hidden="true"
           data-color1="#2F5BFF" data-color2="#00B8E6"
           data-accent1="#1E90FF" data-accent2="#3D8BFF"
-          data-speed="0.6" data-scale="1.4" data-brightness="1.2"
-          data-band-spread="1.3" data-band-width="0.84" data-layer-offset="0.45"
-          data-color-speed="0.8" data-mouse-influence="0.22" data-mouse-influence-y="0.04"
-          data-v-width="0.58" data-v-inset-top="0.12" data-v-inset-bottom="0.02"
-          data-v-calm="0.8" data-flat-level="0.3" data-shift-y="0"></div>
+          data-speed="0.55" data-scale="1.4" data-brightness="0.72"
+          data-band-spread="1.3" data-band-width="1.0" data-layer-offset="0.45"
+          data-color-speed="0.8" data-mouse-influence="0.22" data-mouse-influence-y="0.04"></div>
 
-        <!-- Celda vacía bajo la navegación: js/main.js la mide y la aurora dibuja la V aquí -->
-        <span class="hero__visual" aria-hidden="true"></span>
+        <!-- Planeta conectado que asoma por la esquina inferior izquierda (initHeroGlobe en js/main.js):
+             continentes en puntos, rutas de red entre ciudades con Bogotá como nodo principal -->
+        <canvas class="hero__globe" aria-hidden="true"></canvas>
 
-        <!-- Composición centrada: todo cuelga del eje de la V -->
+        <!-- Fragmentos de pseudocódigo que aparecen en los vacíos (initHeroCode en js/main.js) -->
+        <div class="hero__code" aria-hidden="true"></div>
+
         <div class="container hero__inner">
-          <!-- Dos palabras a cada lado; al hacer scroll cada palabra viaja a su
-               lugar en una sola línea (js/main.js calcula el recorrido: --dx / --dy) -->
-          <h1 class="hero__title" id="hero-title">
-            <span class="hero__title-start" data-anim style="--i:1"><span class="hero__word accent">Energía</span> <span class="hero__word">digital</span></span>
-            <!-- Isotipo al centro del eje (trazo de assets/BRANDING.md); se retira al juntarse el título -->
-            <span class="hero__mark" aria-hidden="true">
-              <svg viewBox="0 0 201 181" focusable="false">
-                <path class="hero__mark-long" d="M0,0 H46 L110,181 H65 Z"/>
-                <path class="hero__mark-short" d="M155,0 H201 L150,129 H105 Z"/>
-              </svg>
-            </span>
-            <span class="hero__title-end" data-anim style="--i:2"><span class="hero__word">para</span> <span class="hero__word accent">negocios</span></span>
-          </h1>
+          <!-- Logo horizontal completo en vector (trazado de assets/volt.png):
+               cada letra es una pieza para la animación de entrada -->
+          <div class="hero__brand">
+            <svg class="hero__logo" viewBox="319 392 902 286" role="img" aria-labelledby="hero-logo-title">
+              <title id="hero-logo-title">VOLT soluciones digitales</title>
+              <path class="hero__glyph hero__glyph--v1" style="--g:0" d="M319 392H377L496 585H442Z"/>
+              <path class="hero__glyph hero__glyph--v2" style="--g:1" d="M532 392H588L498 529L470.5 485.5Z"/>
+              <path class="hero__glyph" style="--g:2" fill-rule="evenodd" d="M620 425H787V557L759 585H590V455ZM637 461V550H742V461Z"/>
+              <path class="hero__glyph" style="--g:3" d="M827 425H872V550H1009L979 585H827Z"/>
+              <path class="hero__glyph" style="--g:4" d="M1006 425H1221L1190 461H1123V585H1079V461H1006Z"/>
+              <text class="hero__descriptor" x="321" y="662" textLength="898" lengthAdjust="spacing">soluciones digitales</text>
+            </svg>
+            <!-- Altura de la aurora: centro de las letras VOLT (js/main.js la mide) -->
+            <span class="hero__band" aria-hidden="true"></span>
+          </div>
 
-          <div class="hero__ctas" data-anim style="--i:3">
-            <a class="btn btn--primary" href="#contacto">
-              Cotiza tu proyecto
-              <i class="ph ph-arrow-right" aria-hidden="true"></i>
-            </a>
-            <a class="btn btn--secondary" href="#proyectos">
-              <i class="ph ph-squares-four" aria-hidden="true"></i>
-              Ver proyectos
-            </a>
+          <div class="hero__copy">
+            <h1 class="hero__title" id="hero-title" data-anim style="--i:6"><span>Tu negocio a otro voltaje</span></h1>
+            <p class="hero__lead" data-anim style="--i:7">Software, páginas web y apps a la medida para pymes en Colombia.</p>
+
+            <div class="hero__ctas" data-anim style="--i:8">
+              <a class="btn btn--primary" href="#contacto">
+                Cotiza tu proyecto
+                <i class="ph ph-arrow-right" aria-hidden="true"></i>
+              </a>
+              <a class="btn btn--secondary" href="#proyectos">
+                <i class="ph ph-squares-four" aria-hidden="true"></i>
+                Ver proyectos
+              </a>
+            </div>
           </div>
         </div>
 
-        <!-- Indicador de scroll: se desvanece mientras el título se junta -->
+        <!-- Indicador de scroll: se desvanece al empezar a bajar -->
         <span class="hero__scroll" aria-hidden="true">
           <span class="hero__scroll-label">Desliza</span>
           <span class="hero__scroll-line"><span></span></span>
         </span>
+      </div>
+    </section>
+
+    <!-- ============ PROCESO (título grande que se disuelve + línea de tiempo) ============
+         En escritorio todo ocurre en una escena fija: primero el título grande;
+         al bajar, sus letras se desvanecen una a una y en ese mismo espacio
+         aparece la línea de tiempo, que luego se desliza de lado con el scroll:
+         la línea se dibuja y cada hito revela su tallo, su icono y su texto
+         cuando la línea lo alcanza (initTimeline en js/main.js; adaptación de
+         "Timeline" de Hyperiux Vault). En móvil, con movimiento reducido o sin
+         JS, el título va arriba y debajo una línea de tiempo vertical. -->
+    <section class="timeline" id="proceso" aria-labelledby="proceso-title" data-timeline>
+      <!-- Recorrido fijo (su alto lo calcula js/main.js en escritorio) -->
+      <div class="timeline__pin">
+        <div class="timeline__sticky">
+          <header class="timeline__intro reveal">
+            <p class="timeline__eyebrow">Energía digital para negocios</p>
+            <!-- js/main.js parte el título en letras para disolverlas -->
+            <h2 class="timeline__title" id="proceso-title">Así trabajamos contigo</h2>
+            <p class="timeline__lead">Un proceso corto y transparente. Siempre sabes en qué va tu proyecto.</p>
+            <span class="timeline__hint" aria-hidden="true"><i class="ph ph-arrow-down"></i></span>
+          </header>
+
+          <div class="timeline__track">
+            <p class="timeline__period">De la idea <br>al lanzamiento <span aria-hidden="true">→</span></p>
+
+            <div class="timeline__rail">
+              <!-- Línea central: base tenue y trazo cian que avanza con el scroll -->
+              <div class="timeline__line" aria-hidden="true">
+                <span class="timeline__cap"></span>
+                <span class="timeline__progress"></span>
+                <span class="timeline__cap timeline__cap--end"></span>
+              </div>
+
+              <ol class="timeline__list">
+                <li class="milestone milestone--top">
+                  <span class="milestone__stem" aria-hidden="true"></span>
+                  <span class="milestone__icon" aria-hidden="true"><i class="ph ph-ear"></i></span>
+                  <div class="milestone__body">
+                    <h3 class="milestone__title"><span class="milestone__mask"><span><span class="milestone__num">01</span> Escuchamos</span></span></h3>
+                    <p class="milestone__text"><span class="milestone__mask"><span>Una conversación para entender tu negocio, tus clientes y el problema que quieres resolver.</span></span></p>
+                  </div>
+                </li>
+                <li class="milestone milestone--bottom">
+                  <span class="milestone__stem" aria-hidden="true"></span>
+                  <span class="milestone__icon" aria-hidden="true"><i class="ph ph-file-text"></i></span>
+                  <div class="milestone__body">
+                    <h3 class="milestone__title"><span class="milestone__mask"><span><span class="milestone__num">02</span> Proponemos</span></span></h3>
+                    <p class="milestone__text"><span class="milestone__mask"><span>Recibes el alcance, los tiempos y el precio por escrito, sin letra pequeña.</span></span></p>
+                  </div>
+                </li>
+                <li class="milestone milestone--top">
+                  <span class="milestone__stem" aria-hidden="true"></span>
+                  <span class="milestone__icon" aria-hidden="true"><i class="ph ph-code"></i></span>
+                  <div class="milestone__body">
+                    <h3 class="milestone__title"><span class="milestone__mask"><span><span class="milestone__num">03</span> Construimos</span></span></h3>
+                    <p class="milestone__text"><span class="milestone__mask"><span>Desarrollamos por entregas cortas: cada semana pruebas avances reales.</span></span></p>
+                  </div>
+                </li>
+                <li class="milestone milestone--bottom">
+                  <span class="milestone__stem" aria-hidden="true"></span>
+                  <span class="milestone__icon" aria-hidden="true"><i class="ph ph-shield-check"></i></span>
+                  <div class="milestone__body">
+                    <h3 class="milestone__title"><span class="milestone__mask"><span><span class="milestone__num">04</span> Probamos</span></span></h3>
+                    <p class="milestone__text"><span class="milestone__mask"><span>Revisamos que sea rápido, seguro y que funcione en celulares y computadores.</span></span></p>
+                  </div>
+                </li>
+                <li class="milestone milestone--top">
+                  <span class="milestone__stem" aria-hidden="true"></span>
+                  <span class="milestone__icon" aria-hidden="true"><i class="ph ph-rocket-launch"></i></span>
+                  <div class="milestone__body">
+                    <h3 class="milestone__title"><span class="milestone__mask"><span><span class="milestone__num">05</span> Lanzamos</span></span></h3>
+                    <p class="milestone__text"><span class="milestone__mask"><span>Publicamos, conectamos tu dominio y capacitamos a tu equipo.</span></span></p>
+                  </div>
+                </li>
+                <li class="milestone milestone--bottom">
+                  <span class="milestone__stem" aria-hidden="true"></span>
+                  <span class="milestone__icon" aria-hidden="true"><i class="ph ph-handshake"></i></span>
+                  <div class="milestone__body">
+                    <h3 class="milestone__title"><span class="milestone__mask"><span><span class="milestone__num">06</span> Acompañamos</span></span></h3>
+                    <p class="milestone__text"><span class="milestone__mask"><span>Soporte cercano y mejoras continuas para que tu negocio siga creciendo.</span></span></p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -193,39 +297,6 @@
             </ul>
           </article>
         </div>
-      </div>
-    </section>
-
-    <!-- ============ PROCESO (línea de tiempo) ============ -->
-    <section class="section section--tint" id="proceso" aria-labelledby="proceso-title">
-      <div class="container">
-        <header class="section-head reveal">
-          <h2 id="proceso-title">Así trabajamos contigo</h2>
-          <p>Un proceso corto y transparente. Siempre sabes en qué va tu proyecto.</p>
-        </header>
-
-        <ol class="steps" data-steps>
-          <li class="step reveal" style="--i:0">
-            <span class="step__icon"><i class="ph ph-ear" aria-hidden="true"></i></span>
-            <h3>Escuchamos</h3>
-            <p>Entendemos tu negocio, tus clientes y el problema que quieres resolver.</p>
-          </li>
-          <li class="step reveal" style="--i:1">
-            <span class="step__icon"><i class="ph ph-pencil-ruler" aria-hidden="true"></i></span>
-            <h3>Diseñamos</h3>
-            <p>Te mostramos cómo se verá y funcionará antes de escribir una línea de código.</p>
-          </li>
-          <li class="step reveal" style="--i:2">
-            <span class="step__icon"><i class="ph ph-code" aria-hidden="true"></i></span>
-            <h3>Construimos</h3>
-            <p>Desarrollamos por entregas cortas para que pruebes avances cada semana.</p>
-          </li>
-          <li class="step reveal" style="--i:3">
-            <span class="step__icon"><i class="ph ph-rocket-launch" aria-hidden="true"></i></span>
-            <h3>Acompañamos</h3>
-            <p>Publicamos, capacitamos a tu equipo y seguimos pendientes de que todo funcione.</p>
-          </li>
-        </ol>
       </div>
     </section>
 
@@ -509,8 +580,8 @@
 
       <nav class="footer__col" aria-label="Pie de página">
         <h2>Explora</h2>
-        <a href="#servicios">Servicios</a>
         <a href="#proceso">Proceso</a>
+        <a href="#servicios">Servicios</a>
         <a href="#proyectos">Proyectos</a>
         <a href="#nosotros">Nosotros</a>
         <a href="#preguntas">Preguntas</a>
@@ -529,5 +600,29 @@
       <a class="link" href="#inicio">Volver arriba <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
     </div>
   </footer>
+
+  <!-- ============ FLOTANTE: avatar (abajo a la derecha; WhatsApp va en la navegación) ============ -->
+  <!-- Avatar decorativo de VOLT: sus ojos y su cabeza siguen el cursor (initBuddy en js/main.js) -->
+  <div class="buddy" aria-hidden="true">
+    <svg class="buddy__svg" viewBox="5 -2 54 56" focusable="false">
+      <g class="buddy__head">
+        <line class="buddy__antenna" x1="32" y1="12" x2="32" y2="5"/>
+        <path class="buddy__spark" d="M32 0.5 L35 3.5 L32 6.5 L29 3.5 Z"/>
+        <!-- Cabeza con dos esquinas en chaflán, como la O del logo -->
+        <path class="buddy__shell" d="M19 12 H54 V43 L45 52 H10 V21 Z"/>
+        <path class="buddy__visor" d="M22 20 H46 V36 L41 41 H18 V24 Z"/>
+        <g class="buddy__eyes">
+          <rect class="buddy__eye" x="24.5" y="26.5" width="4" height="8" rx="1"/>
+          <rect class="buddy__eye" x="35.5" y="26.5" width="4" height="8" rx="1"/>
+        </g>
+      </g>
+    </svg>
+    <!-- Globo de diálogo con texto pixelado: js/main.js escribe llamados a la acción
+         según la sección visible; al hacer clic lleva al destino del mensaje -->
+    <div class="buddy__bubble">
+      <span class="buddy__text"><span class="buddy__typed"></span><span class="buddy__caret"></span><span class="buddy__ghost"></span></span>
+      <button class="buddy__close" type="button" tabindex="-1">x</button>
+    </div>
+  </div>
 </body>
 </html>
