@@ -12,7 +12,7 @@
   const hasIO = 'IntersectionObserver' in window;
 
   // Progreso de salida del hero (0 = arriba del todo, 1 = fuera de pantalla).
-  // Lo escribe initHeroScroll; la aurora y el planeta lo leen en su animación.
+  // Lo escribe initHeroScroll; el planeta lo lee para apagar sus líneas guía.
   const heroScroll = { m: 0 };
 
   /* ---------- Navegación: fondo al hacer scroll ---------- */
@@ -101,414 +101,27 @@
     });
   }
 
-  /* ---------- Hero: aurora recta detrás del logo (port sin dependencias de SoftAurora de React Bits) ----------
-     - Forma: banda horizontal a la altura de .hero__band (centro de las letras VOLT),
-       así la aurora hace de fondo del logo.
-     - Movimiento: el del SoftAurora original (ruido Perlin 3D a plena amplitud,
-       mouse y degradado coseno que recorre la pantalla).
-     - Color: dos capas azules; el degradado las hace viajar hacia un acento azul
-       y el centro de la línea se aclara a un azul pálido cuando más brilla. */
-  function initHeroAurora() {
-    const host = document.querySelector('.hero__aurora');
-    const hero = document.getElementById('inicio');
-    if (!host || !hero) return;
-    const stage = hero.querySelector('.hero__stage') || hero;
-    // Marcador de la altura de la banda
-    const bandRef = hero.querySelector('.hero__band');
-
-    // Altura de la banda en px desde el borde superior de la aurora; también
-    // queda en CSS (--band-y) para el respaldo sin WebGL
-    const measureBand = () => {
-      const hostRect = host.getBoundingClientRect();
-      const y = bandRef
-        ? bandRef.getBoundingClientRect().top - hostRect.top
-        : hostRect.height * 0.42;
-      host.style.setProperty('--band-y', `${Math.round(y)}px`);
-      return { y, height: hostRect.height };
-    };
-
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl', {
-      alpha: true,
-      premultipliedAlpha: false,
-      antialias: false,
-      depth: false,
-      powerPreference: 'low-power',
-    });
-    if (!gl) {
-      // Sin WebGL queda el halo de respaldo del CSS, a la altura del logo
-      measureBand();
-      if ('ResizeObserver' in window) new ResizeObserver(measureBand).observe(host);
-      return;
-    }
-
-    // La aurora es muy difusa: se dibuja a media resolución y el navegador la escala
-    const RENDER_SCALE = 0.5;
-
-    const num = (key, fallback) => {
-      const v = parseFloat(host.dataset[key]);
-      return Number.isFinite(v) ? v : fallback;
-    };
-    const hexToVec3 = (hex) => {
-      const h = hex.replace('#', '');
-      return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-    };
-
-    const opts = {
-      speed: num('speed', 0.6),
-      scale: num('scale', 1.5),
-      brightness: num('brightness', 1),
-      color1: hexToVec3(host.dataset.color1 || '#2F5BFF'),
-      color2: hexToVec3(host.dataset.color2 || '#00B8E6'),
-      accent1: hexToVec3(host.dataset.accent1 || '#1E90FF'),
-      accent2: hexToVec3(host.dataset.accent2 || '#3D8BFF'),
-      noiseFreq: num('noiseFrequency', 2.5),
-      noiseAmp: num('noiseAmplitude', 1),
-      bandSpread: num('bandSpread', 1),
-      // Grosor de la banda (1 = el del original, más = más gruesa)
-      bandWidth: num('bandWidth', 1),
-      octaveDecay: num('octaveDecay', 0.1),
-      layerOffset: num('layerOffset', 0),
-      colorSpeed: num('colorSpeed', 1),
-      mouseInfluence: num('mouseInfluence', 0.25),
-      // Reacción vertical aparte y más baja: al subir o bajar el mouse la banda casi no se mueve
-      mouseInfluenceY: num('mouseInfluenceY', 0.04),
-    };
-
-    const vertex = `
-      attribute vec2 position;
-      void main() { gl_Position = vec4(position, 0.0, 1.0); }
-    `;
-
-    const fragment = `
-      #ifdef GL_FRAGMENT_PRECISION_HIGH
-      precision highp float;
-      #else
-      precision mediump float;
-      #endif
-
-      uniform float uTime;
-      uniform vec3 uResolution;
-      uniform float uSpeed;
-      uniform float uScale;
-      uniform float uBrightness;
-      uniform vec3 uColor1;
-      uniform vec3 uColor2;
-      uniform vec3 uAccent1;
-      uniform vec3 uAccent2;
-      uniform float uNoiseFreq;
-      uniform float uNoiseAmp;
-      uniform float uBandY;      // altura de la banda (uv: 1.0 = alto del lienzo, y desde abajo)
-      uniform float uBandScale;  // 1 / grosor de la banda
-      uniform float uBandSpread;
-      uniform float uOctaveDecay;
-      uniform float uLayerOffset;
-      uniform float uColorSpeed;
-      uniform vec2 uMouse;
-      uniform float uMouseInfluence;
-      uniform float uMouseInfluenceY;
-
-      #define TAU 6.28318
-      // Color del centro de la línea cuando brilla más (azul pálido)
-      #define CORE_COLOR vec3(0.72, 0.88, 1.0)
-
-      vec3 gradientHash(vec3 p) {
-        p = vec3(
-          dot(p, vec3(127.1, 311.7, 234.6)),
-          dot(p, vec3(269.5, 183.3, 198.3)),
-          dot(p, vec3(169.5, 283.3, 156.9))
-        );
-        vec3 h = fract(sin(p) * 43758.5453123);
-        float phi = acos(2.0 * h.x - 1.0);
-        float theta = TAU * h.y;
-        return vec3(cos(theta) * sin(phi), sin(theta) * cos(phi), cos(phi));
-      }
-
-      float quinticSmooth(float t) {
-        float t2 = t * t;
-        float t3 = t * t2;
-        return 6.0 * t3 * t2 - 15.0 * t2 * t2 + 10.0 * t3;
-      }
-
-      vec3 cosineGradient(float t, vec3 a, vec3 b, vec3 c, vec3 d) {
-        return a + b * cos(TAU * (c * t + d));
-      }
-
-      float perlin3D(float amplitude, float frequency, float px, float py, float pz) {
-        float x = px * frequency;
-        float y = py * frequency;
-
-        float fx = floor(x); float fy = floor(y); float fz = floor(pz);
-        float cx = ceil(x);  float cy = ceil(y);  float cz = ceil(pz);
-
-        vec3 g000 = gradientHash(vec3(fx, fy, fz));
-        vec3 g100 = gradientHash(vec3(cx, fy, fz));
-        vec3 g010 = gradientHash(vec3(fx, cy, fz));
-        vec3 g110 = gradientHash(vec3(cx, cy, fz));
-        vec3 g001 = gradientHash(vec3(fx, fy, cz));
-        vec3 g101 = gradientHash(vec3(cx, fy, cz));
-        vec3 g011 = gradientHash(vec3(fx, cy, cz));
-        vec3 g111 = gradientHash(vec3(cx, cy, cz));
-
-        float d000 = dot(g000, vec3(x - fx, y - fy, pz - fz));
-        float d100 = dot(g100, vec3(x - cx, y - fy, pz - fz));
-        float d010 = dot(g010, vec3(x - fx, y - cy, pz - fz));
-        float d110 = dot(g110, vec3(x - cx, y - cy, pz - fz));
-        float d001 = dot(g001, vec3(x - fx, y - fy, pz - cz));
-        float d101 = dot(g101, vec3(x - cx, y - fy, pz - cz));
-        float d011 = dot(g011, vec3(x - fx, y - cy, pz - cz));
-        float d111 = dot(g111, vec3(x - cx, y - cy, pz - cz));
-
-        float sx = quinticSmooth(x - fx);
-        float sy = quinticSmooth(y - fy);
-        float sz = quinticSmooth(pz - fz);
-
-        float lx00 = mix(d000, d100, sx);
-        float lx10 = mix(d010, d110, sx);
-        float lx01 = mix(d001, d101, sx);
-        float lx11 = mix(d011, d111, sx);
-
-        return amplitude * mix(mix(lx00, lx10, sy), mix(lx01, lx11, sy), sz);
-      }
-
-      // Igual que el original: 3 octavas de ruido que deforman la banda.
-      float auroraGlow(float t, vec2 shift) {
-        vec2 uv = gl_FragCoord.xy / uResolution.y;
-        uv += shift;
-
-        float noiseVal = 0.0;
-        float freq = uNoiseFreq;
-        float amp = uNoiseAmp;
-        vec2 samplePos = uv * uScale;
-
-        for (float i = 0.0; i < 3.0; i += 1.0) {
-          noiseVal += perlin3D(amp, freq, samplePos.x, samplePos.y, t);
-          amp *= uOctaveDecay;
-          freq *= 2.0;
-        }
-
-        float yBand = (uv.y - uBandY) * 10.0 * uBandScale;
-        return 0.3 * max(exp(uBandSpread * (1.0 - 1.1 * abs(noiseVal + yBand))), 0.0);
-      }
-
-      void main() {
-        vec2 uv = gl_FragCoord.xy / uResolution.xy;
-        float t = uSpeed * 0.4 * uTime;
-        vec2 shift = (uMouse - 0.5) * vec2(uMouseInfluence, uMouseInfluenceY);
-
-        float glow1 = auroraGlow(t, shift);
-        float glow2 = auroraGlow(t + uLayerOffset, shift);
-        vec3 gradient1 = cosineGradient(uv.x + uTime * uSpeed * 0.2 * uColorSpeed, vec3(0.5), vec3(0.5), vec3(1.0), vec3(0.3, 0.20, 0.20));
-        vec3 gradient2 = cosineGradient(uv.x + uTime * uSpeed * 0.1 * uColorSpeed, vec3(0.5), vec3(0.5), vec3(2.0, 1.0, 0.0), vec3(0.5, 0.20, 0.25));
-
-        // El degradado del original recorre la pantalla: aquí mueve cada capa
-        // entre su color de marca y su acento, y pulsa su intensidad.
-        float phase1 = dot(gradient1, vec3(0.299, 0.587, 0.114));
-        float phase2 = dot(gradient2, vec3(0.299, 0.587, 0.114));
-        vec3 tint1 = mix(uColor1, uAccent1, smoothstep(0.2, 0.85, phase1));
-        vec3 tint2 = mix(uColor2, uAccent2, smoothstep(0.2, 0.85, phase2));
-        float shade1 = mix(0.6, 1.0, phase1);
-        float shade2 = mix(0.6, 1.0, phase2);
-
-        vec3 col = 0.99 * glow1 * shade1 * tint1;
-        col += 0.99 * glow2 * shade2 * tint2;
-        col *= uBrightness;
-
-        // Donde las dos capas se suman el color se saturaba y se quemaba a
-        // blanco o lila. Se comprime de forma gradual conservando el tono (así
-        // la banda mantiene su degradado de centro a bordes), y solo el centro
-        // de la línea se aclara hacia un azul pálido.
-        float peak = max(col.r, max(col.g, col.b));
-        float core = smoothstep(1.2, 2.6, peak);
-        col *= (1.0 - exp(-1.3 * peak)) / max(peak, 0.0001);
-        col = mix(col, CORE_COLOR, core * 0.5);
-
-        gl_FragColor = vec4(col, clamp(length(col), 0.0, 1.0));
-      }
-    `;
-
-    const compile = (type, source) => {
-      const shader = gl.createShader(type);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('[VOLT] Aurora shader:', gl.getShaderInfoLog(shader));
-        return null;
-      }
-      return shader;
-    };
-
-    const vs = compile(gl.VERTEX_SHADER, vertex);
-    const fs = compile(gl.FRAGMENT_SHADER, fragment);
-    if (!vs || !fs) return;
-
-    const program = gl.createProgram();
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error('[VOLT] Aurora program:', gl.getProgramInfoLog(program));
-      return;
-    }
-    gl.useProgram(program);
-
-    // Un solo triángulo que cubre toda la pantalla
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const position = gl.getAttribLocation(program, 'position');
-    gl.enableVertexAttribArray(position);
-    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-
-    const u = (name) => gl.getUniformLocation(program, name);
-    const uTime = u('uTime');
-    const uResolution = u('uResolution');
-    const uMouse = u('uMouse');
-    const uBandY = u('uBandY');
-    const uBandScale = u('uBandScale');
-    const uBrightness = u('uBrightness');
-    const bandScale = 1 / Math.max(0.1, opts.bandWidth);
-
-    gl.uniform1f(u('uSpeed'), opts.speed);
-    gl.uniform1f(u('uScale'), opts.scale);
-    gl.uniform1f(uBrightness, opts.brightness);
-    gl.uniform3fv(u('uColor1'), opts.color1);
-    gl.uniform3fv(u('uColor2'), opts.color2);
-    gl.uniform3fv(u('uAccent1'), opts.accent1);
-    gl.uniform3fv(u('uAccent2'), opts.accent2);
-    gl.uniform1f(u('uNoiseFreq'), opts.noiseFreq);
-    gl.uniform1f(u('uNoiseAmp'), opts.noiseAmp);
-    gl.uniform1f(uBandScale, bandScale);
-    gl.uniform1f(u('uBandSpread'), opts.bandSpread);
-    gl.uniform1f(u('uOctaveDecay'), opts.octaveDecay);
-    gl.uniform1f(u('uLayerOffset'), opts.layerOffset);
-    gl.uniform1f(u('uColorSpeed'), opts.colorSpeed);
-    gl.uniform1f(u('uMouseInfluence'), opts.mouseInfluence);
-    gl.uniform1f(u('uMouseInfluenceY'), opts.mouseInfluenceY);
-    gl.clearColor(0, 0, 0, 0);
-
-    const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
-    // Punto de partida fijo en el tiempo para que el primer cuadro ya tenga forma
-    const TIME_OFFSET = 18;
-    let running = false;
-    let frame = 0;
-    let lastTime = 0;
-    // Pasa la altura de la banda al shader, en unidades de uv
-    const updateBand = () => {
-      const { y, height } = measureBand();
-      if (height) gl.uniform1f(uBandY, 1 - y / height);
-    };
-
-    // Scroll suavizado: al bajar la banda se estrecha, pierde brillo y sube con el logo
-    let scrollM = 0;
-    let bandM = -1;
-
-    const renderFrame = (now) => {
-      mouse.x += (mouse.tx - mouse.x) * 0.05;
-      mouse.y += (mouse.ty - mouse.y) * 0.05;
-      scrollM += (heroScroll.m - scrollM) * 0.12;
-      if (Math.abs(scrollM - bandM) > 0.002) {
-        bandM = scrollM;
-        updateBand();
-        gl.uniform1f(uBandScale, bandScale * (1 + scrollM * 2.2));
-        gl.uniform1f(uBrightness, opts.brightness * (1 - scrollM * 0.6));
-      }
-      gl.uniform1f(uTime, now * 0.001 + TIME_OFFSET);
-      gl.uniform2f(uMouse, mouse.x, mouse.y);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-    };
-
-    const resize = () => {
-      updateBand();
-      const w = Math.max(1, Math.round(host.clientWidth * RENDER_SCALE));
-      const h = Math.max(1, Math.round(host.clientHeight * RENDER_SCALE));
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-        gl.viewport(0, 0, w, h);
-        gl.uniform3f(uResolution, w, h, w / h);
-      }
-      if (!running) renderFrame(lastTime);
-    };
-
-    const loop = (now) => {
-      lastTime = now;
-      renderFrame(now);
-      frame = running ? requestAnimationFrame(loop) : 0;
-    };
-    const start = () => {
-      if (running || reduceMotion()) return;
-      running = true;
-      frame = requestAnimationFrame(loop);
-    };
-    const stop = () => {
-      running = false;
-      cancelAnimationFrame(frame);
-      frame = 0;
-    };
-
-    stage.addEventListener('pointermove', (e) => {
-      if (e.pointerType !== 'mouse') return;
-      const rect = host.getBoundingClientRect();
-      mouse.tx = (e.clientX - rect.left) / rect.width;
-      mouse.ty = 1 - (e.clientY - rect.top) / rect.height;
-    });
-    stage.addEventListener('pointerleave', () => {
-      mouse.tx = 0.5;
-      mouse.ty = 0.5;
-    });
-
-    canvas.addEventListener('webglcontextlost', (e) => {
-      e.preventDefault();
-      stop();
-      host.classList.remove('is-ready');
-    });
-
-    host.appendChild(canvas);
-    resize();
-    requestAnimationFrame(() => host.classList.add('is-ready'));
-
-    // El logo puede moverse sin que cambie el tamaño del hero (p. ej. al cargar las fuentes)
-    if ('ResizeObserver' in window) {
-      const ro = new ResizeObserver(resize);
-      ro.observe(host);
-      if (bandRef?.parentElement) ro.observe(bandRef.parentElement);
-    } else {
-      window.addEventListener('resize', resize);
-    }
-    document.fonts?.ready.then(resize);
-
-    prefersReducedMotion.addEventListener('change', () => {
-      if (reduceMotion()) {
-        stop();
-        renderFrame(lastTime);
-      } else start();
-    });
-
-    if (hasIO) {
-      new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) start();
-        else stop();
-      }).observe(stage);
-    } else {
-      start();
-    }
-  }
-
-  /* ---------- Hero: planeta conectado (esquina inferior izquierda) ----------
-     Canvas 2D sin dependencias. El planeta gira despacio y solo asoma su
-     cuarto superior derecho: el centro queda fuera de pantalla, abajo a la
-     izquierda. Capas: brillo de atmósfera y esfera (fijas, se dibujan una
-     vez), continentes en puntos, rutas de red entre ciudades con pulsos que
-     las recorren, nodos (Bogotá con un anillo que late) y un halo de
-     partículas alrededor. */
+  /* ---------- Hero: planeta conectado (centro, delante de las letras VOLT) ----------
+     Canvas 2D sin dependencias. El planeta sale desde abajo, centrado, y su
+     borde superior tapa la parte baja de las letras VOLT (lo mide del logo).
+     Se mece despacio alrededor de Bogotá, que siempre queda a la vista, y
+     el mouse lo gira un poco. Capas: brillo de atmósfera y esfera (fijas, se
+     dibujan una vez), una órbita, continentes en puntos, rutas de red con
+     pulsos, nodos (Bogotá con un anillo que late) y las líneas guía que unen
+     las dos anotaciones laterales con Bogotá. Todo queda dentro del contorno
+     de la esfera: las rutas van pegadas a la superficie y solo se dibuja la
+     cara visible. */
   function initHeroGlobe() {
     const canvas = document.querySelector('.hero__globe');
     const hero = document.getElementById('inicio');
     if (!canvas || !hero) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const logo = hero.querySelector('.hero__logo');
+    const inner = hero.querySelector('.hero__inner');
+    // Puntos de las anotaciones de donde salen las líneas guía hacia Bogotá
+    const pins = [...hero.querySelectorAll('.hero__pin')];
+    const compact = window.matchMedia('(max-width: 960px)');
 
     // Tierra: un bit por punto de una esfera de Fibonacci de 48 000 puntos
     // (1 = tierra). Generado de Natural Earth 110 m (dominio público), sin la Antártida.
@@ -569,7 +182,7 @@
       const B = CITIES[b];
       const dot = Math.min(1, Math.max(-1, A[0] * B[0] + A[1] * B[1] + A[2] * B[2]));
       const w = Math.acos(dot);
-      const lift = 0.05 + 0.14 * (w / Math.PI);
+      const lift = 0.015 + 0.05 * (w / Math.PI);
       const pts = new Float32Array((ARC_STEPS + 1) * 3);
       for (let i = 0; i <= ARC_STEPS; i += 1) {
         const t = i / ARC_STEPS;
@@ -582,70 +195,15 @@
       return { pts, speed: 0.07 + ((k * 37) % 11) * 0.006, phase: ((k * 53) % 17) / 17 };
     });
 
-    // Malla: nodos repartidos por la esfera, cada uno unido a sus 3 vecinos más
-    // cercanos con tramos de círculo máximo pegados a la superficie
-    const MESH_NODES = 120;
-    const MESH_STEPS = 8;
-    const meshNodes = Array.from({ length: MESH_NODES }, (_, i) => {
-      const y = 1 - ((i + 0.5) * 2) / MESH_NODES;
-      const r = Math.sqrt(1 - y * y);
-      // Un pequeño desorden para que no se vea como una rejilla
-      const a = i * GOLDEN + Math.sin(i * 12.9898) * 0.35;
-      return [r * Math.sin(a), y, r * Math.cos(a)];
-    });
-    const meshEdges = [];
-    const seen = new Set();
-    meshNodes.forEach((A, i) => {
-      meshNodes
-        .map((B, j) => ({ j, d: A[0] * B[0] + A[1] * B[1] + A[2] * B[2] }))
-        .filter(({ j }) => j !== i)
-        .sort((a, b) => b.d - a.d)
-        .slice(0, 3)
-        .forEach(({ j }) => {
-          const key = i < j ? `${i}-${j}` : `${j}-${i}`;
-          if (seen.has(key)) return;
-          seen.add(key);
-          const B = meshNodes[j];
-          const pts = new Float32Array((MESH_STEPS + 1) * 3);
-          for (let k = 0; k <= MESH_STEPS; k += 1) {
-            const t = k / MESH_STEPS;
-            const x = A[0] + (B[0] - A[0]) * t;
-            const y = A[1] + (B[1] - A[1]) * t;
-            const z = A[2] + (B[2] - A[2]) * t;
-            const len = Math.hypot(x, y, z) || 1;
-            pts[k * 3] = x / len;
-            pts[k * 3 + 1] = y / len;
-            pts[k * 3 + 2] = z / len;
-          }
-          meshEdges.push(pts);
-        });
-    });
-
-    // Halo de partículas en el plano de la pantalla, más denso cerca del borde.
-    // Solo recorren el cuarto que asoma (el resto del círculo queda fuera de pantalla).
-    const HALO_FROM = -0.45;
-    const HALO_SPAN = Math.PI / 2 + 0.9;
-    const particles = Array.from({ length: 320 }, (_, i) => {
-      const u = (i * 0.618034) % 1;
-      return {
-        angle: ((i * 0.7548776) % 1) * HALO_SPAN,
-        dist: 1.02 + Math.pow((i * 0.3819) % 1, 2.2) * 0.5,
-        spin: (0.012 + u * 0.03) * (i % 5 === 0 ? -1 : 1),
-        size: 0.5 + ((i * 0.7548) % 1) * 1.3,
-        twinkle: 0.6 + u * 1.8,
-        phase: i * 1.7,
-        tone: i % 7 === 0 ? '0, 224, 239' : i % 3 === 0 ? '255, 255, 255' : '150, 200, 255',
-      };
-    });
-
-    // Vista: inclinación fija y giro de oeste a este
+    // Vista: inclinación fija; Bogotá de frente y un vaivén lento a los lados
     const TILT = -0.3;
     const cT = Math.cos(TILT);
     const sT = Math.sin(TILT);
-    const START = rad(98); // arranca con Bogotá en el centro del cuarto visible
-    const SPIN = 0.03; // rad/s: una vuelta cada ~3 min 30 s
-    const SCROLL_SPIN = 1.8; // rad extra al salir del hero: bajar hace girar el planeta
-    let scrollM = 0;
+    const START = rad(74); // Bogotá (74° O) mirando al frente
+    const SWAY = 0.45; // amplitud del vaivén (rad)
+    const SWAY_SPEED = 0.06; // rad/s del vaivén
+    const MOUSE_TURN = 0.22; // giro extra con el mouse (rad, a cada lado)
+    const mouse = { x: 0, tx: 0 };
 
     let W = 0;
     let H = 0;
@@ -678,33 +236,32 @@
       const c = b.getContext('2d');
       c.scale(dpr, dpr);
 
-      // Atmósfera: brillo azul que sale del borde
-      const atm = c.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.34);
-      atm.addColorStop(0, 'rgba(47, 110, 255, 0.5)');
-      atm.addColorStop(0.2, 'rgba(47, 100, 255, 0.22)');
-      atm.addColorStop(0.55, 'rgba(47, 91, 255, 0.06)');
+      // Atmósfera: una franja fina de brillo justo fuera del borde
+      const atm = c.createRadialGradient(cx, cy, R * 0.98, cx, cy, R * 1.2);
+      atm.addColorStop(0, 'rgba(47, 120, 255, 0.34)');
+      atm.addColorStop(0.25, 'rgba(47, 100, 255, 0.12)');
       atm.addColorStop(1, 'rgba(47, 91, 255, 0)');
       c.fillStyle = atm;
       c.fillRect(0, 0, W, H);
 
-      // Esfera: azul noche, más clara hacia arriba a la derecha (donde está la aurora)
-      const body = c.createRadialGradient(cx + R * 0.45, cy - R * 0.45, R * 0.05, cx, cy, R);
-      body.addColorStop(0, '#1A2F6B');
-      body.addColorStop(0.55, '#0E1A40');
-      body.addColorStop(1, '#080D22');
+      // Esfera: azul noche, con la luz arriba a la izquierda (la parte que se ve)
+      const body = c.createRadialGradient(cx - R * 0.25, cy - R * 0.7, R * 0.05, cx, cy, R);
+      body.addColorStop(0, '#1B3170');
+      body.addColorStop(0.5, '#0F1B44');
+      body.addColorStop(1, '#070B1D');
       c.beginPath();
       c.arc(cx, cy, R, 0, Math.PI * 2);
       c.fillStyle = body;
       c.fill();
 
-      // Luz de borde
-      const rim = c.createRadialGradient(cx, cy, R * 0.82, cx, cy, R);
+      // Luz de borde y un contorno nítido de 1 px
+      const rim = c.createRadialGradient(cx, cy, R * 0.86, cx, cy, R);
       rim.addColorStop(0, 'rgba(60, 140, 255, 0)');
-      rim.addColorStop(1, 'rgba(80, 170, 255, 0.28)');
+      rim.addColorStop(1, 'rgba(80, 170, 255, 0.22)');
       c.fillStyle = rim;
       c.fill();
       c.lineWidth = 1;
-      c.strokeStyle = 'rgba(140, 200, 255, 0.35)';
+      c.strokeStyle = 'rgba(150, 215, 255, 0.55)';
       c.stroke();
       return b;
     };
@@ -714,12 +271,23 @@
       if (!rect.width || !rect.height) return false;
       W = rect.width;
       H = rect.height;
-      dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
-      R = H / 1.42;
-      cx = R * 0.16;
-      cy = H + R * 0.1;
+      cx = W / 2;
+      let top;
+      if (compact.matches || !logo) {
+        // Móvil: el planeta asoma debajo del texto y los botones
+        R = Math.min(W * 0.42, H * 0.28);
+        top = inner ? inner.getBoundingClientRect().bottom - rect.top + 64 : H * 0.6;
+      } else {
+        // Escritorio: su borde superior cubre el tercio de abajo de las
+        // letras; la parte alta de O y L sigue leyéndose
+        R = Math.min(W * 0.2, H * 0.36);
+        const l = logo.getBoundingClientRect();
+        top = l.top - rect.top + l.height * 0.74;
+      }
+      cy = top + R;
       base = makeBase();
       glow = glow || makeGlow();
       return true;
@@ -735,16 +303,16 @@
       out.z = y * sT + z1 * cT;
       return out;
     };
-    // Visible si mira al frente o si, elevado, se asoma por fuera del disco
-    const visible = (p) => p.z > 0 || p.x * p.x + p.y * p.y > 1;
+    // Solo la cara que mira al frente (nada se asoma por fuera del contorno)
+    const visible = (p) => p.z > 0.02;
 
     const LAND_ALPHA = [0.18, 0.38, 0.62, 0.9];
     const landPaths = LAND_ALPHA.map(() => null);
 
     const draw = (time) => {
       const t = time / 1000;
-      scrollM += (heroScroll.m - scrollM) * 0.1;
-      const rot = START + (reduceMotion() ? 0 : t * SPIN + scrollM * SCROLL_SPIN);
+      mouse.x += (mouse.tx - mouse.x) * 0.04;
+      const rot = START + (reduceMotion() ? 0 : Math.sin(t * SWAY_SPEED) * SWAY) + mouse.x * MOUSE_TURN;
       const cR = Math.cos(rot);
       const sR = Math.sin(rot);
 
@@ -753,28 +321,12 @@
       ctx.drawImage(base, 0, 0);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Órbitas: dos circunferencias finas alrededor del planeta
+      // Órbita: una circunferencia fina alrededor del planeta
       ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(120, 180, 255, 0.16)';
+      ctx.strokeStyle = 'rgba(120, 180, 255, 0.12)';
       ctx.beginPath();
-      ctx.arc(cx, cy, R * 1.14, 0, Math.PI * 2);
+      ctx.arc(cx, cy, R * 1.16, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.strokeStyle = 'rgba(120, 180, 255, 0.08)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, R * 1.32, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Halo de partículas
-      for (const p of particles) {
-        const a = HALO_FROM + ((((p.angle + t * p.spin) % HALO_SPAN) + HALO_SPAN) % HALO_SPAN);
-        const x = cx + Math.cos(a) * p.dist * R;
-        const y = cy - Math.sin(a) * p.dist * R;
-        if (x < -4 || y < -4 || x > W + 4 || y > H + 4) continue;
-        const fade = 1 - (p.dist - 1.03) / 0.55;
-        const alpha = fade * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * p.twinkle + p.phase)));
-        ctx.fillStyle = `rgba(${p.tone}, ${alpha.toFixed(3)})`;
-        ctx.fillRect(x - p.size / 2, y - p.size / 2, p.size, p.size);
-      }
 
       // Continentes: puntos agrupados por brillo (más brillantes al frente)
       const dot = Math.max(1.1, R * 0.0056);
@@ -793,37 +345,10 @@
         ctx.fill(landPaths[k]);
       }
 
-      // Malla de red: muy tenue, más visible al frente
-      ctx.lineWidth = 0.8;
-      ctx.strokeStyle = 'rgba(170, 215, 255, 0.13)';
-      ctx.beginPath();
-      for (const pts of meshEdges) {
-        let pen = false;
-        for (let k = 0; k <= MESH_STEPS; k += 1) {
-          const p = project(pts[k * 3], pts[k * 3 + 1], pts[k * 3 + 2], cR, sR);
-          if (p.z <= 0) {
-            pen = false;
-            continue;
-          }
-          const x = cx + p.x * R;
-          const y = cy - p.y * R;
-          if (pen) ctx.lineTo(x, y);
-          else ctx.moveTo(x, y);
-          pen = true;
-        }
-      }
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(200, 235, 255, 0.55)';
-      for (const v of meshNodes) {
-        const p = project(v[0], v[1], v[2], cR, sR);
-        if (p.z <= 0.1) continue;
-        ctx.fillRect(cx + p.x * R - 1, cy - p.y * R - 1, 2, 2);
-      }
-
       // Rutas de red
       ctx.lineWidth = 1;
       ctx.lineCap = 'round';
-      ctx.strokeStyle = 'rgba(190, 230, 255, 0.3)';
+      ctx.strokeStyle = 'rgba(190, 230, 255, 0.24)';
       ctx.beginPath();
       for (const arc of arcs) {
         let pen = false;
@@ -889,6 +414,36 @@
         }
         ctx.globalAlpha = 1;
       });
+
+      // Líneas guía: de cada anotación a Bogotá, con un codo como en una lámina
+      // técnica. Se apagan al empezar a bajar.
+      const fade = Math.max(0, 1 - heroScroll.m * 4);
+      const b = project(CITIES[0][0], CITIES[0][1], CITIES[0][2], cR, sR);
+      if (fade > 0 && b.z > 0 && !compact.matches) {
+        const bx = cx + b.x * R;
+        const by = cy - b.y * R;
+        const rect = canvas.getBoundingClientRect();
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'butt';
+        ctx.strokeStyle = `rgba(255, 255, 255, ${(0.32 * fade).toFixed(3)})`;
+        ctx.beginPath();
+        for (const pin of pins) {
+          const r = pin.getBoundingClientRect();
+          if (!r.width) continue;
+          const ax = r.left + r.width / 2 - rect.left;
+          const ay = r.top + r.height / 2 - rect.top;
+          const ex = ax + (bx - ax) * 0.42;
+          // El trazo final se detiene antes del nodo para no tapar su anillo
+          const dx = bx - ex;
+          const dy = by - ay;
+          const len = Math.hypot(dx, dy) || 1;
+          const stop = Math.min(10, len);
+          ctx.moveTo(ax + Math.sign(bx - ax) * 6, ay);
+          ctx.lineTo(ex, ay);
+          ctx.lineTo(bx - (dx / len) * stop, by - (dy / len) * stop);
+        }
+        ctx.stroke();
+      }
     };
 
     let running = false;
@@ -914,15 +469,29 @@
     draw(0);
     requestAnimationFrame(() => canvas.classList.add('is-ready'));
 
+    const refit = () => {
+      if (resize()) draw(last);
+    };
     if ('ResizeObserver' in window) {
-      new ResizeObserver(() => {
-        if (resize()) draw(last);
-      }).observe(canvas);
+      const ro = new ResizeObserver(refit);
+      ro.observe(canvas);
+      if (logo) ro.observe(logo);
     } else {
-      window.addEventListener('resize', () => {
-        if (resize()) draw(last);
-      });
+      window.addEventListener('resize', refit);
     }
+    // El titular cambia de alto al cargar las fuentes y mueve el logo
+    document.fonts?.ready.then(refit);
+    compact.addEventListener('change', refit);
+
+    // El mouse gira el planeta un poco hacia donde está
+    const stage = hero.querySelector('.hero__stage') || hero;
+    stage.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      mouse.tx = (e.clientX / window.innerWidth) * 2 - 1;
+    });
+    stage.addEventListener('pointerleave', () => {
+      mouse.tx = 0;
+    });
 
     prefersReducedMotion.addEventListener('change', () => {
       if (reduceMotion()) {
@@ -943,10 +512,9 @@
 
   /* ---------- Hero: progreso de salida ----------
      Escribe --m en .hero (0 = arriba del todo, 1 = hero fuera de pantalla):
-     el CSS lo usa para el parallax del logo, las estrellas y el planeta, y
-     para apagar la aurora, los fragmentos de código y el indicador de scroll.
-     También queda en heroScroll: la aurora se estrecha y el planeta gira. Con movimiento reducido
-     no se escribe y todo queda fijo. */
+     el CSS lo usa para el parallax del logo y el planeta y para apagar las
+     anotaciones. También queda en heroScroll: el planeta apaga sus líneas
+     guía. Con movimiento reducido no se escribe y todo queda fijo. */
   function initHeroScroll() {
     const hero = document.getElementById('inicio');
     if (!hero) return;
@@ -979,8 +547,8 @@
 
   /* ---------- Navegación: la firma de la barra cede el sitio al logo del hero ----------
      Mientras el logo grande del hero se ve, la firma pequeña de la barra se
-     cambia por el isotipo V en contorno (no se repite la marca completa dos
-     veces en la misma pantalla). */
+     cambia por el botón de cotizar (no se repite la marca dos veces en la
+     misma pantalla). */
   function initNavBrand() {
     const nav = document.getElementById('nav');
     const logo = document.querySelector('.hero__logo');
@@ -990,153 +558,6 @@
       ([entry]) => nav.classList.toggle('is-hero-brand', entry.isIntersecting),
       { rootMargin: `-${navH}px 0px 0px 0px` }
     ).observe(logo);
-  }
-
-  /* ---------- Hero: fragmentos de pseudocódigo en los vacíos ----------
-     Dos huecos simétricos, a cada lado entre la navegación y el logo (abajo
-     están el planeta y el avatar). Salen de a dos, uno a cada lado; la
-     siguiente pareja espera a que terminen ambos. Cada fragmento se escribe, se queda y se va. */
-  function initHeroCode() {
-    const layer = document.querySelector('.hero__code');
-    const hero = document.getElementById('inicio');
-    if (!layer || !hero) return;
-    const inner = hero.querySelector('.hero__inner');
-    const logo = hero.querySelector('.hero__logo');
-    if (!inner || !logo) return;
-
-    // Pseudocódigo en español que un cliente entienda (líneas cortas)
-    const SNIPPETS = [
-      "if (pyme.necesita('web')) {\n  volt.construir();\n}",
-      "await tareas.automatizar();\n// más tiempo para vender",
-      "const app = volt.crear({\n  medida: 'tu negocio',\n});",
-      "cliente.ventas++;\nsoporte.cercano = true;",
-      "// de la idea a la web\nproyecto.lanzar();",
-      "function crecer(pyme) {\n  return pyme.digital();\n}",
-    ];
-
-    const TYPE_MS = 26;
-    const HOLD_MS = 3600;
-    const FADE_MS = 700;
-    const GAP_MS = 900;
-    const LINE_H = 11.5 * 1.6;
-
-    // Resaltado mínimo: comentarios, cadenas, palabras clave y llamadas
-    const TOKEN = /(\/\/.*$)|('[^']*')|\b(if|const|await|return|function|true)\b|([A-Za-z_]\w*)(?=\()/gm;
-    const tokenize = (code) => {
-      const out = [];
-      let last = 0;
-      code.replace(TOKEN, (match, comment, str, kw, fn, offset) => {
-        if (offset > last) out.push({ cls: '', text: code.slice(last, offset) });
-        const cls = comment ? 'tk-c' : str ? 'tk-s' : kw ? 'tk-k' : 'tk-f';
-        out.push({ cls, text: match });
-        last = offset + match.length;
-        return match;
-      });
-      if (last < code.length) out.push({ cls: '', text: code.slice(last) });
-      return out;
-    };
-
-    const active = () =>
-      document.visibilityState === 'visible' &&
-      getComputedStyle(layer).display !== 'none' &&
-      parseFloat(getComputedStyle(hero).getPropertyValue('--m') || 0) < 0.15 &&
-      hero.getBoundingClientRect().bottom > 0;
-
-    // Posición de un hueco (entre la navegación y el logo), relativa a la capa
-    // que cubre el escenario del hero
-    const place = (el, slot, lines) => {
-      const base = layer.getBoundingClientRect();
-      const box = inner.getBoundingClientRect();
-      const l = logo.getBoundingClientRect();
-      const h = lines * LINE_H;
-      const left = slot === 'l';
-      el.style.top = `${(box.top + l.top) / 2 - h / 2 - base.top}px`;
-      el.style.left = left ? `${box.left - base.left}px` : 'auto';
-      el.style.right = left ? 'auto' : `${base.right - box.right}px`;
-      // Espacio disponible: medio contenedor (ninguno si no cabe en alto sin rozar el logo)
-      return l.top - box.top >= h + 32 ? box.width / 2 - 24 : 0;
-    };
-
-    const show = (slot, code, done) => {
-      const el = document.createElement('pre');
-      el.className = 'hero__snippet';
-      layer.appendChild(el);
-      const room = place(el, slot, code.split('\n').length);
-
-      const tokens = tokenize(code).map(({ cls, text }) => {
-        const span = document.createElement('span');
-        if (cls) span.className = cls;
-        span.textContent = text;
-        el.appendChild(span);
-        return { span, text };
-      });
-      // Se mide completo antes de escribirlo: si no cabe, se salta este turno
-      if (el.scrollWidth > room) {
-        el.remove();
-        return setTimeout(done, GAP_MS);
-      }
-      tokens.forEach(({ span }) => { span.textContent = ''; });
-      const caret = document.createElement('span');
-      caret.className = 'hero__snippet-caret';
-      el.appendChild(caret);
-      // La medición de arriba ya calculó el estado inicial: la transición arranca sin esperar un frame
-      el.classList.add('is-on');
-
-      const finish = () => {
-        setTimeout(() => {
-          el.classList.remove('is-on');
-          setTimeout(() => {
-            el.remove();
-            setTimeout(done, GAP_MS);
-          }, FADE_MS);
-        }, HOLD_MS);
-      };
-
-      if (reduceMotion()) {
-        tokens.forEach(({ span, text }) => { span.textContent = text; });
-        caret.remove();
-        return finish();
-      }
-
-      let ti = 0;
-      let ci = 0;
-      const type = () => {
-        const tok = tokens[ti];
-        ci += 1;
-        tok.span.textContent = tok.text.slice(0, ci);
-        if (ci >= tok.text.length) {
-          ti += 1;
-          ci = 0;
-        }
-        if (ti < tokens.length) setTimeout(type, TYPE_MS);
-        else {
-          caret.remove();
-          finish();
-        }
-      };
-      setTimeout(type, 200);
-    };
-
-    // Parejas simétricas, alternando cuál lado empieza
-    const PAIRS = [['l', 'r'], ['r', 'l']];
-    let turn = 0;
-    let index = 0;
-    const next = () => {
-      if (!active()) return setTimeout(next, 1500);
-      const [a, b] = PAIRS[turn % PAIRS.length];
-      turn += 1;
-      let pending = 2;
-      const done = () => {
-        pending -= 1;
-        if (!pending) next();
-      };
-      show(a, SNIPPETS[index % SNIPPETS.length], done);
-      // El segundo arranca un poco después: se sienten independientes
-      const second = SNIPPETS[(index + 1) % SNIPPETS.length];
-      setTimeout(() => show(b, second, done), 700);
-      index += 2;
-    };
-    setTimeout(next, 1800);
   }
 
   /* ---------- Avatar flotante: mira hacia el cursor ----------
@@ -1224,6 +645,17 @@
     setTimeout(blink, 2200);
 
     initBuddyTalk(buddy);
+
+    // Fuera del hero: el avatar aparece cuando el hero deja libre la mitad
+    // de arriba de la pantalla
+    const hero = document.getElementById('inicio');
+    if (hero && hasIO) {
+      buddy.classList.add('is-away');
+      new IntersectionObserver(
+        ([entry]) => buddy.classList.toggle('is-away', entry.isIntersecting),
+        { rootMargin: '0px 0px -50% 0px' }
+      ).observe(hero);
+    }
   }
 
   /* ---------- Avatar: comentarios con llamados a la acción ----------
@@ -1252,7 +684,7 @@
       ],
       proceso: [{ text: 'Te acompañamos en cada paso, sin tecnicismos.', href: '#contacto' }],
       proyectos: [{ text: '¿Te imaginas tu negocio aquí? Hablemos.', href: '#contacto' }],
-      nosotros: [{ text: 'Estamos en Bogotá, Tocaima y Girardot. ¡Cerca de ti!', href: whatsapp }],
+      beneficios: [{ text: '¿Quieres vender más y tener todo bajo control? Hablemos.', href: '#contacto' }],
       preguntas: [{ text: '¿Te quedó otra duda? Escríbenos por WhatsApp.', href: whatsapp }],
       contacto: [{ text: '¡Casi listo! Cuéntanos tu idea en el formulario.', href: '#contacto' }],
     };
@@ -1316,7 +748,10 @@
 
     function speak() {
       clearTimeout(nextTimer); // por si se llama antes de tiempo (clic en el avatar)
-      const busy = document.visibilityState !== 'visible' || nav?.classList.contains('is-open');
+      const busy =
+        document.visibilityState !== 'visible' ||
+        nav?.classList.contains('is-open') ||
+        buddy.classList.contains('is-away');
       if (busy) return schedule(8000);
 
       hide();
@@ -1376,36 +811,6 @@
     buddy.addEventListener('click', () => speak());
 
     schedule(FIRST_DELAY);
-  }
-
-  /* ---------- Hero: contadores de estadísticas ---------- */
-  function initCounters() {
-    const counters = document.querySelectorAll('[data-count]');
-    if (!counters.length || reduceMotion()) return;
-
-    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
-    const duration = 1400;
-    const startDelay = 650; // espera a que termine la entrada del hero
-
-    counters.forEach((el) => {
-      const target = parseFloat(el.dataset.count);
-      const decimals = parseInt(el.dataset.decimals || '0', 10);
-      const suffix = el.dataset.suffix || '';
-      const finalText = el.textContent;
-      el.setAttribute('aria-label', finalText);
-      el.textContent = (0).toFixed(decimals) + suffix;
-
-      setTimeout(() => {
-        const start = performance.now();
-        const tick = (now) => {
-          const t = Math.min((now - start) / duration, 1);
-          el.textContent = (target * easeOut(t)).toFixed(decimals) + suffix;
-          if (t < 1) requestAnimationFrame(tick);
-          else el.textContent = finalText;
-        };
-        requestAnimationFrame(tick);
-      }, startDelay);
-    });
   }
 
   /* ---------- Proceso: título que se disuelve + línea de tiempo con scroll ----------
@@ -1614,6 +1019,59 @@
     }
   }
 
+  /* ---------- Servicios: tarjetas que se apilan ----------
+     Cada tarjeta es sticky (CSS). Aquí se calcula cuánto la cubren las que
+     vienen detrás: para cada tarjeta siguiente, qué tanto ha subido hasta su
+     sitio fijo (0 = aún lejos, 1 = ya encima). La suma es --depth, que el CSS
+     usa para encoger y oscurecer la tarjeta. Solo corre mientras la sección
+     está en pantalla; con movimiento reducido no se escribe nada. */
+  function initStack() {
+    const stack = document.querySelector('[data-stack]');
+    if (!stack) return;
+    const items = [...stack.querySelectorAll('.stack__item')];
+    if (items.length < 2) return;
+
+    let ticking = false;
+    let visible = !hasIO;
+
+    const update = () => {
+      ticking = false;
+      if (reduceMotion()) {
+        items.forEach((el) => el.style.removeProperty('--depth'));
+        return;
+      }
+      // Qué tanto ha llegado cada tarjeta a su sitio fijo
+      const arrive = items.map((el, i) => {
+        if (i === 0) return 0;
+        const top = el.getBoundingClientRect().top;
+        const stick = parseFloat(getComputedStyle(el).top) || 0;
+        const travel = el.offsetHeight + (parseFloat(getComputedStyle(el).marginTop) || 0);
+        return Math.min(1, Math.max(0, 1 - (top - stick) / travel));
+      });
+      let depth = 0;
+      for (let i = items.length - 1; i >= 0; i -= 1) {
+        items[i].style.setProperty('--depth', depth.toFixed(3));
+        depth += arrive[i];
+      }
+    };
+    const request = () => {
+      if (ticking || !visible) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    if (hasIO) {
+      new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        if (visible) request();
+      }).observe(stack);
+    }
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request);
+    prefersReducedMotion.addEventListener('change', update);
+    update();
+  }
+
   /* ---------- Aparición al entrar en pantalla ---------- */
   function initReveal() {
     const items = document.querySelectorAll('.reveal');
@@ -1637,57 +1095,362 @@
     items.forEach((el) => io.observe(el));
   }
 
-  /* ---------- Proyectos: pestañas accesibles (flechas, Inicio, Fin) ---------- */
-  function initTabs() {
-    const tablist = document.querySelector('.projects__tabs');
-    if (!tablist) return;
+  /* ---------- Proyectos: galería que se expande ----------
+     Un caso abierto a la vez. Clic (o Enter) en una franja la abre. Mientras
+     la galería está en pantalla rota sola: la barra cian del caso abierto se
+     llena en --dur y al terminar abre el siguiente. Se pausa con el cursor o
+     el foco dentro y deja de rotar del todo cuando la persona elige un caso.
+     Con movimiento reducido no rota. */
+  function initCases() {
+    const root = document.querySelector('[data-cases]');
+    if (!root) return;
+    const cases = [...root.querySelectorAll('.case')];
+    if (!cases.length) return;
+    const triggers = cases.map((c) => c.querySelector('.case__trigger'));
+    const bodies = cases.map((c) => c.querySelector('.case__body'));
+    let current = Math.max(0, cases.findIndex((c) => c.classList.contains('is-active')));
 
-    const tabs = [...tablist.querySelectorAll('[role="tab"]')];
-    const panels = tabs.map((t) => document.getElementById(t.getAttribute('aria-controls')));
-
-    const select = (index, focus = true) => {
-      tabs.forEach((tab, i) => {
+    const open = (index) => {
+      current = index;
+      cases.forEach((c, i) => {
         const active = i === index;
-        tab.setAttribute('aria-selected', String(active));
-        tab.tabIndex = active ? 0 : -1;
-        const panel = panels[i];
-        if (!panel) return;
-        panel.hidden = !active;
-        panel.classList.remove('is-entering');
-        if (active) {
-          void panel.offsetWidth; // reinicia la animación de entrada
-          panel.classList.add('is-entering');
-        }
+        c.classList.toggle('is-active', active);
+        triggers[i]?.setAttribute('aria-expanded', String(active));
+        if (bodies[i]) bodies[i].inert = !active;
       });
-      if (focus) tabs[index].focus({ preventScroll: true });
-
-      // En móvil las pestañas se desplazan en horizontal: mantiene visible la activa
-      if (tablist.scrollWidth > tablist.clientWidth) {
-        tablist.scrollTo({
-          left: tabs[index].offsetLeft - tablist.offsetLeft - 16,
-          behavior: reduceMotion() ? 'auto' : 'smooth',
-        });
-      }
     };
 
-    tabs.forEach((tab, i) => tab.addEventListener('click', () => select(i, false)));
+    const stopAutoplay = () => root.classList.remove('is-autoplay');
 
-    tablist.addEventListener('keydown', (e) => {
-      const current = tabs.indexOf(document.activeElement);
-      if (current < 0) return;
-      const last = tabs.length - 1;
-      const keys = {
-        ArrowDown: current === last ? 0 : current + 1,
-        ArrowRight: current === last ? 0 : current + 1,
-        ArrowUp: current === 0 ? last : current - 1,
-        ArrowLeft: current === 0 ? last : current - 1,
-        Home: 0,
-        End: last,
-      };
-      if (e.key in keys) {
-        e.preventDefault();
-        select(keys[e.key]);
+    triggers.forEach((t, i) =>
+      t?.addEventListener('click', () => {
+        stopAutoplay();
+        open(i);
+      })
+    );
+
+    if (reduceMotion()) return;
+
+    // Rotación automática: empieza pausada hasta que la galería se ve
+    root.classList.add('is-autoplay', 'is-paused');
+    let hovering = false;
+    let focused = false;
+    let visible = false;
+    const syncPause = () => root.classList.toggle('is-paused', hovering || focused || !visible);
+
+    root.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'mouse') hovering = true;
+      syncPause();
+    });
+    root.addEventListener('pointerleave', () => {
+      hovering = false;
+      syncPause();
+    });
+    root.addEventListener('focusin', () => {
+      focused = true;
+      syncPause();
+    });
+    root.addEventListener('focusout', (e) => {
+      focused = root.contains(e.relatedTarget);
+      syncPause();
+    });
+
+    root.addEventListener('animationend', (e) => {
+      if (e.animationName !== 'case-progress' || !root.classList.contains('is-autoplay')) return;
+      open((current + 1) % cases.length);
+    });
+
+    if (hasIO) {
+      new IntersectionObserver(
+        ([entry]) => {
+          visible = entry.isIntersecting;
+          syncPause();
+        },
+        { threshold: 0.35 }
+      ).observe(root);
+    } else {
+      visible = true;
+      syncPause();
+    }
+
+    prefersReducedMotion.addEventListener('change', () => {
+      if (reduceMotion()) stopAutoplay();
+    });
+  }
+
+  /* ---------- Footer: olas en degradado (port sin dependencias de GradientWaves de React Bits) ----------
+     Campo de olas por raymarching en WebGL2 que se pierde en una bruma violeta,
+     con crestas cian. Ajustes en los data-* de .footer__waves. Solo dibuja
+     mientras el footer está en pantalla; con movimiento reducido dibuja un
+     cuadro fijo. Sin WebGL2 queda el brillo de respaldo del CSS. */
+  function initFooterWaves() {
+    const host = document.querySelector('.footer__waves');
+    if (!host) return;
+    const footer = host.closest('footer') || host.parentElement;
+
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2', {
+      alpha: true,
+      premultipliedAlpha: true,
+      antialias: false,
+      depth: false,
+      powerPreference: 'low-power',
+    });
+    if (!gl) return;
+
+    const num = (key, fallback) => {
+      const v = parseFloat(host.dataset[key]);
+      return Number.isFinite(v) ? v : fallback;
+    };
+    const hexToRgb = (hex, fallback) => {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+      return m ? [1, 2, 3].map((k) => parseInt(m[k], 16) / 255) : fallback;
+    };
+
+    const vertex = `#version 300 es
+      in vec2 position;
+      void main() { gl_Position = vec4(position, 0.0, 1.0); }
+    `;
+
+    const fragment = `#version 300 es
+      precision highp float;
+      uniform vec2 iResolution;
+      uniform float iTime;
+      uniform float uSpeed;
+      uniform float uAmplitude;
+      uniform float uWaveScale;
+      uniform float uWaveRatio;
+      uniform float uSwell;
+      uniform float uTurbulence;
+      uniform float uTilt;
+      uniform float uZoom;
+      uniform float uHeight;
+      uniform float uFogDepth;
+      uniform float uSteps;
+      uniform float uBrightness;
+      uniform float uOpacity;
+      uniform float uGrainIntensity;
+      uniform vec2 uMouse;
+      uniform float uParallax;
+      uniform vec3 uHorizonColor;
+      uniform vec3 uWaveColor;
+      uniform vec3 uCrestColor;
+      out vec4 fragColor;
+
+      const float MAX_DIST = 20000.0;
+
+      float hash21(vec2 p) {
+        vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+        p3 += dot(p3, p3.yzx + 33.33);
+        return fract((p3.x + p3.y) * p3.z);
       }
+
+      float plasma(vec3 r, vec2 freq, vec4 tc) {
+        float mx = r.x + tc.x;
+        mx += uSwell * sin((r.y + mx) / 20.0 + tc.y);
+        float my = r.y - tc.z;
+        my += uTurbulence * cos(r.x / 23.0 + tc.w);
+        return r.z - (sin(mx * freq.x) * uAmplitude + sin(my * freq.y) * uAmplitude + uHeight);
+      }
+
+      float raymarch(vec3 pos, vec3 dir, vec2 freq, vec4 tc) {
+        float dist = 0.0;
+        for (int i = 0; i < 128; i++) {
+          if (float(i) >= uSteps) break;
+          float dscene = plasma(pos + dist * dir, freq, tc);
+          if (abs(dscene) < 0.1) break;
+          dist += 0.9 * dscene;
+          if (!(abs(dist) < MAX_DIST)) return MAX_DIST;
+        }
+        return dist;
+      }
+
+      void main() {
+        float T = iTime * uSpeed;
+        vec2 freq = vec2(uWaveScale / 7.0, (uWaveScale * uWaveRatio) / 3.0);
+        vec4 tc = vec4(T / 0.130, T / 0.810, T / 0.200, T / 0.710);
+        float c, s;
+        float vfov = (3.14159 / 2.3) / max(uZoom, 0.05);
+        vec3 cam = vec3(0.0, 0.0, 30.0);
+        vec2 uv = (gl_FragCoord.xy / iResolution.xy) - 0.5;
+        uv.x *= iResolution.x / iResolution.y;
+        uv.y *= -1.0;
+
+        vec3 dir = vec3(0.0, 0.0, -1.0);
+        float ulen = length(uv);
+        float xrot = vfov * ulen;
+        c = cos(xrot); s = sin(xrot);
+        dir = mat3(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c) * dir;
+        vec2 nuv = ulen > 1e-5 ? uv / ulen : vec2(1.0, 0.0);
+        c = nuv.x; s = nuv.y;
+        dir = mat3(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0) * dir;
+        c = cos(uTilt); s = sin(uTilt);
+        dir = mat3(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c) * dir;
+
+        float yaw = (uMouse.x - 0.5) * uParallax * 0.4;
+        float pitch = (uMouse.y - 0.5) * uParallax * 0.4;
+        c = cos(yaw); s = sin(yaw);
+        dir = mat3(c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c) * dir;
+        c = cos(pitch); s = sin(pitch);
+        dir = mat3(1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c) * dir;
+
+        float dist = raymarch(cam, dir, freq, tc);
+        vec3 pos = cam + dist * dir;
+
+        float t = clamp(uFogDepth / max(dist, 0.001), 0.0, 1.0);
+        vec3 body = mix(uWaveColor, uCrestColor, clamp(pos.z * 0.08 + 0.5, 0.0, 1.0));
+        vec3 col = mix(uHorizonColor, body, t);
+        col *= uBrightness;
+        col = clamp(col, 0.0, 1.0);
+
+        float alpha = clamp(t, 0.0, 1.0) * uOpacity;
+        float g = hash21(gl_FragCoord.xy + mod(iTime, 64.0) * 11.0);
+        alpha += (g - 0.5) * uGrainIntensity;
+        alpha = clamp(alpha, 0.0, 1.0);
+        fragColor = vec4(col * alpha, alpha);
+      }
+    `;
+
+    const compile = (type, source) => {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error('[VOLT] Olas del footer:', gl.getShaderInfoLog(shader));
+        return null;
+      }
+      return shader;
+    };
+    const vs = compile(gl.VERTEX_SHADER, vertex);
+    const fs = compile(gl.FRAGMENT_SHADER, fragment);
+    if (!vs || !fs) return;
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error('[VOLT] Olas del footer:', gl.getProgramInfoLog(program));
+      return;
+    }
+    gl.useProgram(program);
+
+    // Un solo triángulo que cubre todo el lienzo
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const position = gl.getAttribLocation(program, 'position');
+    gl.enableVertexAttribArray(position);
+    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+    const u = (name) => gl.getUniformLocation(program, name);
+    gl.uniform1f(u('uSpeed'), num('speed', 0.25));
+    gl.uniform1f(u('uAmplitude'), num('amplitude', 2.5));
+    gl.uniform1f(u('uWaveScale'), num('waveScale', 0.6));
+    gl.uniform1f(u('uWaveRatio'), num('waveRatio', 0.9));
+    gl.uniform1f(u('uSwell'), num('swell', 35));
+    gl.uniform1f(u('uTurbulence'), num('turbulence', 20));
+    gl.uniform1f(u('uTilt'), num('tilt', 1.11));
+    gl.uniform1f(u('uZoom'), num('zoom', 1));
+    gl.uniform1f(u('uHeight'), num('height', 5.5));
+    gl.uniform1f(u('uFogDepth'), num('fogDepth', 15));
+    gl.uniform1f(u('uSteps'), 64);
+    gl.uniform1f(u('uBrightness'), num('brightness', 0.85));
+    gl.uniform1f(u('uOpacity'), num('opacity', 0.9));
+    gl.uniform1f(u('uGrainIntensity'), num('grain', 0.04));
+    gl.uniform1f(u('uParallax'), num('parallax', 0.5));
+    gl.uniform3fv(u('uHorizonColor'), hexToRgb(host.dataset.horizon, [0.33, 0.2, 0.74]));
+    gl.uniform3fv(u('uWaveColor'), hexToRgb(host.dataset.wave, [0.04, 0.18, 0.4]));
+    gl.uniform3fv(u('uCrestColor'), hexToRgb(host.dataset.crest, [0, 0.88, 0.94]));
+    const uTime = u('iTime');
+    const uResolution = u('iResolution');
+    const uMouse = u('uMouse');
+    gl.clearColor(0, 0, 0, 0);
+
+    // Las olas son suaves: basta con dibujar a resolución reducida
+    const RENDER_SCALE = 0.6;
+    const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+    const t0 = performance.now();
+    let running = false;
+    let frame = 0;
+
+    const render = (now) => {
+      mouse.x += (mouse.tx - mouse.x) * 0.05;
+      mouse.y += (mouse.ty - mouse.y) * 0.05;
+      gl.uniform1f(uTime, reduceMotion() ? 6 : (now - t0) * 0.001);
+      gl.uniform2f(uMouse, mouse.x, mouse.y);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
+
+    const resize = () => {
+      const w = Math.max(1, Math.round(host.clientWidth * RENDER_SCALE));
+      const h = Math.max(1, Math.round(host.clientHeight * RENDER_SCALE));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+        gl.uniform2f(uResolution, w, h);
+      }
+      if (!running) render(performance.now());
+    };
+
+    const loop = (now) => {
+      render(now);
+      frame = running ? requestAnimationFrame(loop) : 0;
+    };
+    const start = () => {
+      if (running || reduceMotion() || document.hidden) return;
+      running = true;
+      frame = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(frame);
+      frame = 0;
+    };
+
+    footer.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const rect = host.getBoundingClientRect();
+      mouse.tx = (e.clientX - rect.left) / rect.width;
+      mouse.ty = 1 - (e.clientY - rect.top) / rect.height;
+    });
+    footer.addEventListener('pointerleave', () => {
+      mouse.tx = 0.5;
+      mouse.ty = 0.5;
+    });
+
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      stop();
+      host.classList.remove('is-ready');
+    });
+
+    host.appendChild(canvas);
+    resize();
+    requestAnimationFrame(() => host.classList.add('is-ready'));
+    if ('ResizeObserver' in window) new ResizeObserver(resize).observe(host);
+    else window.addEventListener('resize', resize);
+
+    let inView = !hasIO;
+    if (hasIO) {
+      new IntersectionObserver(([entry]) => {
+        inView = entry.isIntersecting;
+        if (inView) start();
+        else stop();
+      }).observe(host);
+    } else {
+      start();
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else if (inView) start();
+    });
+    prefersReducedMotion.addEventListener('change', () => {
+      if (reduceMotion()) {
+        stop();
+        render(performance.now());
+      } else if (inView) start();
     });
   }
 
@@ -1825,16 +1588,15 @@
   initNavState();
   initActiveLinks();
   initMobileMenu();
-  initHeroAurora();
   initHeroGlobe();
   initHeroScroll();
   initNavBrand();
-  initHeroCode();
   initBuddy();
-  initCounters();
   initTimeline();
+  initStack();
   initReveal();
-  initTabs();
+  initCases();
+  initFooterWaves();
   initFaq();
   initContactForm();
   initYear();

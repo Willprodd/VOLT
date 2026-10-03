@@ -33,20 +33,25 @@
   <!-- ============ NAVEGACIÓN ============ -->
   <header class="nav" id="nav">
     <div class="container nav__inner">
-      <a class="nav__brand" href="#inicio" aria-label="VOLT soluciones digitales, ir al inicio">
-        <!-- Isotipo en contorno: ocupa el sitio mientras el logo grande del hero está a la vista -->
-        <svg class="nav__iso" viewBox="0 0 201 181" aria-hidden="true" focusable="false">
-          <path d="M0,0 H46 L110,181 H65 Z"/>
-          <path d="M155,0 H201 L150,129 H105 Z"/>
-        </svg>
-        <img src="img/volt-wordmark.png" alt="VOLT" width="480" height="108">
-      </a>
+      <!-- Extremo izquierdo: mientras el logo grande del hero está a la vista,
+           aquí va el botón de cotizar (la marca no se repite); al bajar vuelve
+           la firma VOLT (initNavBrand en js/main.js) -->
+      <div class="nav__lead">
+        <a class="nav__brand" href="#inicio" aria-label="VOLT soluciones digitales, ir al inicio">
+          <img src="img/volt-wordmark.png" alt="VOLT" width="480" height="108">
+        </a>
+        <a class="btn btn--secondary btn--sm btn--trace nav__cta" href="#contacto">
+          <span class="btn__trace" aria-hidden="true"></span>
+          Cotiza tu proyecto
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        </a>
+      </div>
 
       <nav class="nav__links" aria-label="Principal">
         <a href="#proceso">Proceso</a>
+        <a href="#beneficios">Beneficios</a>
         <a href="#servicios">Servicios</a>
         <a href="#proyectos">Proyectos</a>
-        <a href="#nosotros">Nosotros</a>
         <a href="#preguntas">Preguntas</a>
       </nav>
 
@@ -65,9 +70,9 @@
     <div class="mobile-menu" id="menu-movil" hidden>
       <nav class="container mobile-menu__inner" aria-label="Menú móvil">
         <a href="#proceso">Proceso</a>
+        <a href="#beneficios">Beneficios</a>
         <a href="#servicios">Servicios</a>
         <a href="#proyectos">Proyectos</a>
-        <a href="#nosotros">Nosotros</a>
         <a href="#preguntas">Preguntas</a>
         <a class="btn btn--primary" href="#contacto">Cotiza tu proyecto</a>
       </nav>
@@ -76,76 +81,55 @@
 
   <main id="main">
 
-    <!-- ============ HERO (logo VOLT protagonista sobre una aurora recta) ============ -->
+    <!-- ============ HERO (VOLT gigante al fondo, planeta delante y dos anotaciones) ============
+         Arriba, el titular corto y espaciado. Detrás, la firma VOLT a todo el
+         ancho. Delante, el planeta conectado (initHeroGlobe en js/main.js) tapa
+         la parte baja de las letras. A los lados, dos anotaciones con una línea
+         guía que el planeta dibuja hasta Bogotá. El botón de cotizar vive en la
+         barra mientras se ve el hero. -->
     <section class="hero" id="inicio" aria-labelledby="hero-title">
       <div class="hero__stage">
-        <!-- Fondo: grano, rejilla tenue y brillo que sube desde abajo -->
-        <div class="hero__bg" aria-hidden="true"></div>
-        <!-- Cielo de estrellas muy tenue (dos capas: una fija y otra que titila) -->
-        <div class="hero__stars" aria-hidden="true"></div>
-
-        <!--
-          Aurora (WebGL): banda horizontal que pasa por detrás del logo y le sirve de fondo.
-          Su altura la marca .hero__band (centro de las letras VOLT). Ajustes en data-*
-          (ver initHeroAurora en js/main.js):
-            color1 / color2     colores base de cada capa
-            accent1 / accent2   color hacia el que viaja cada capa
-            band-width          grosor de la banda (1 = original, más = más gruesa)
-            mouse-influence(-y) reacción horizontal / vertical al mouse
-        -->
-        <div class="hero__aurora" aria-hidden="true"
-          data-color1="#2F5BFF" data-color2="#00B8E6"
-          data-accent1="#1E90FF" data-accent2="#3D8BFF"
-          data-speed="0.55" data-scale="1.4" data-brightness="0.72"
-          data-band-spread="1.3" data-band-width="1.0" data-layer-offset="0.45"
-          data-color-speed="0.8" data-mouse-influence="0.22" data-mouse-influence-y="0.04"></div>
-
-        <!-- Planeta conectado que asoma por la esquina inferior izquierda (initHeroGlobe en js/main.js):
-             continentes en puntos, rutas de red entre ciudades con Bogotá como nodo principal -->
         <canvas class="hero__globe" aria-hidden="true"></canvas>
 
-        <!-- Fragmentos de pseudocódigo que aparecen en los vacíos (initHeroCode en js/main.js) -->
-        <div class="hero__code" aria-hidden="true"></div>
-
         <div class="container hero__inner">
-          <!-- Logo horizontal completo en vector (trazado de assets/volt.png):
-               cada letra es una pieza para la animación de entrada -->
+          <h1 class="hero__title" id="hero-title" data-anim style="--i:0"><span>Tu negocio a otro voltaje</span></h1>
+
+          <!-- Firma VOLT en vector (trazado de assets/volt.png): cada letra es
+               una pieza para la animación de entrada -->
           <div class="hero__brand">
-            <svg class="hero__logo" viewBox="319 392 902 286" role="img" aria-labelledby="hero-logo-title">
+            <svg class="hero__logo" viewBox="319 392 902 193" role="img" aria-labelledby="hero-logo-title">
               <title id="hero-logo-title">VOLT soluciones digitales</title>
               <path class="hero__glyph hero__glyph--v1" style="--g:0" d="M319 392H377L496 585H442Z"/>
               <path class="hero__glyph hero__glyph--v2" style="--g:1" d="M532 392H588L498 529L470.5 485.5Z"/>
               <path class="hero__glyph" style="--g:2" fill-rule="evenodd" d="M620 425H787V557L759 585H590V455ZM637 461V550H742V461Z"/>
               <path class="hero__glyph" style="--g:3" d="M827 425H872V550H1009L979 585H827Z"/>
               <path class="hero__glyph" style="--g:4" d="M1006 425H1221L1190 461H1123V585H1079V461H1006Z"/>
-              <text class="hero__descriptor" x="321" y="662" textLength="898" lengthAdjust="spacing">soluciones digitales</text>
             </svg>
-            <!-- Altura de la aurora: centro de las letras VOLT (js/main.js la mide) -->
-            <span class="hero__band" aria-hidden="true"></span>
           </div>
 
-          <div class="hero__copy">
-            <h1 class="hero__title" id="hero-title" data-anim style="--i:6"><span>Tu negocio a otro voltaje</span></h1>
-            <p class="hero__lead" data-anim style="--i:7">Software, páginas web y apps a la medida para pymes en Colombia.</p>
+          <!-- Anotaciones en las esquinas de abajo, a los lados del planeta: una
+               línea fina arriba y, desde su extremo interior (.hero__pin), la
+               línea guía que el planeta dibuja hasta Bogotá -->
+          <div class="hero__note hero__note--left" data-anim style="--i:6">
+            <span class="hero__pin" aria-hidden="true"></span>
+            <p class="hero__note-title">A la medida de tu pyme</p>
+            <p class="hero__note-text">Software, páginas web y apps para pymes en Colombia.</p>
+            <a class="arrow-link hero__link" href="#proyectos">
+              Ver proyectos
+              <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
 
-            <div class="hero__ctas" data-anim style="--i:8">
-              <a class="btn btn--primary" href="#contacto">
-                Cotiza tu proyecto
-                <i class="ph ph-arrow-right" aria-hidden="true"></i>
-              </a>
-              <a class="btn btn--secondary" href="#proyectos">
-                <i class="ph ph-squares-four" aria-hidden="true"></i>
-                Ver proyectos
-              </a>
-            </div>
+          <div class="hero__note hero__note--right" data-anim style="--i:7">
+            <span class="hero__pin" aria-hidden="true"></span>
+            <p class="hero__note-title">Sin letra pequeña</p>
+            <p class="hero__note-text">Alcance, precio y fechas claros desde el inicio. Siempre sabes en qué va tu proyecto.</p>
+            <a class="arrow-link hero__link" href="#proceso">
+              Así trabajamos
+              <i class="ph ph-arrow-right" aria-hidden="true"></i>
+            </a>
           </div>
         </div>
-
-        <!-- Indicador de scroll: se desvanece al empezar a bajar -->
-        <span class="hero__scroll" aria-hidden="true">
-          <span class="hero__scroll-label">Desliza</span>
-          <span class="hero__scroll-line"><span></span></span>
-        </span>
       </div>
     </section>
 
@@ -162,7 +146,6 @@
       <div class="timeline__pin">
         <div class="timeline__sticky">
           <header class="timeline__intro reveal">
-            <p class="timeline__eyebrow">Energía digital para negocios</p>
             <!-- js/main.js parte el título en letras para disolverlas -->
             <h2 class="timeline__title" id="proceso-title">Así trabajamos contigo</h2>
             <p class="timeline__lead">Un proceso corto y transparente. Siempre sabes en qué va tu proyecto.</p>
@@ -236,7 +219,45 @@
       </div>
     </section>
 
-    <!-- ============ SERVICIOS (bento) ============ -->
+    <!-- ============ BENEFICIOS (propuesta + tres resultados) ============
+         Banda con cortes diagonales entre el proceso y los servicios: a la
+         izquierda la promesa; a la derecha, cómo se traduce en el día a día. -->
+    <section class="local" id="beneficios" aria-labelledby="beneficios-title">
+      <div class="container local__grid">
+        <div class="local__copy">
+          <h2 id="beneficios-title" class="reveal">Aumenta las ganancias y el control de tu negocio</h2>
+          <p class="local__statement reveal" style="--i:1">
+            Software hecho para cómo trabajas: menos tareas a mano, menos errores y claridad sobre cada peso que entra y sale.
+          </p>
+        </div>
+
+        <ul class="local__values">
+          <li class="reveal" style="--i:2">
+            <span class="icon-box"><i class="ph ph-trend-up" aria-hidden="true"></i></span>
+            <div>
+              <h3>Vende más</h3>
+              <p>Tienda en línea, pagos y WhatsApp conectados para que no se te escape ninguna venta.</p>
+            </div>
+          </li>
+          <li class="reveal" style="--i:3">
+            <span class="icon-box"><i class="ph ph-lightning" aria-hidden="true"></i></span>
+            <div>
+              <h3>Ahorra tiempo</h3>
+              <p>Automatizamos las tareas repetidas para que tu equipo se enfoque en lo importante.</p>
+            </div>
+          </li>
+          <li class="reveal" style="--i:4">
+            <span class="icon-box"><i class="ph ph-chart-line-up" aria-hidden="true"></i></span>
+            <div>
+              <h3>Decide con datos</h3>
+              <p>Ventas, gastos e inventario en un tablero claro, siempre al día.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ SERVICIOS (tarjetas que se apilan al bajar) ============ -->
     <section class="section" id="servicios" aria-labelledby="servicios-title">
       <div class="container">
         <header class="section-head reveal">
@@ -244,63 +265,96 @@
           <p>Un solo equipo para tu web, tu app y los sistemas que usas cada día.</p>
         </header>
 
-        <div class="bento">
-          <article class="card cell cell--web reveal" style="--i:0">
-            <div class="cell__body">
-              <span class="cell__icon"><i class="ph ph-browser" aria-hidden="true"></i></span>
-              <h3>Páginas web y tiendas en línea</h3>
-              <p>Sitios rápidos, fáciles de administrar y listos para vender con pagos en línea.</p>
-              <ul class="tags">
-                <li>Landing pages</li>
-                <li>E-commerce</li>
-                <li>SEO</li>
-              </ul>
-            </div>
-            <div class="cell__media">
-              <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=800&h=700&q=70" alt="Persona revisando una página web en el portátil y el celular" width="800" height="700" loading="lazy">
-            </div>
-          </article>
-
-          <article class="card cell cell--apps reveal" style="--i:1">
-            <div class="cell__body">
-              <span class="cell__icon"><i class="ph ph-device-mobile" aria-hidden="true"></i></span>
-              <h3>Apps móviles</h3>
-              <p>Apps para Android y iPhone que tus clientes sí van a usar.</p>
-            </div>
-            <div class="cell__media cell__media--tall">
-              <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=700&h=800&q=70" alt="Celular con varias aplicaciones en pantalla" width="700" height="800" loading="lazy">
+        <!-- Tarjetas que se apilan (initStack en js/main.js): cada servicio se
+             queda fijo bajo la barra y el siguiente sube encima; las de atrás se
+             encogen y oscurecen un poco. Sin JS o con movimiento reducido solo
+             se apilan, sin escala. -->
+        <div class="stack" data-stack>
+          <article class="stack__item" style="--i:0">
+            <div class="card stack__card">
+              <div class="stack__body">
+                <span class="icon-box"><i class="ph ph-browser" aria-hidden="true"></i></span>
+                <div class="stack__text">
+                  <h3>Páginas web y tiendas en línea</h3>
+                  <p>Sitios rápidos, fáciles de administrar y listos para vender con pagos en línea.</p>
+                  <ul class="tags"><li>Landing pages</li><li>E-commerce</li><li>SEO</li></ul>
+                </div>
+              </div>
+              <div class="stack__media">
+                <img src="https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&w=1200&h=900&q=72" alt="Monitor con el diseño de una página web, junto a una tableta y un celular" width="1200" height="900" loading="lazy">
+              </div>
+              <span class="stack__shade" aria-hidden="true"></span>
             </div>
           </article>
-
-          <article class="card cell cell--custom reveal" style="--i:2">
-            <span class="cell__icon"><i class="ph ph-gear-six" aria-hidden="true"></i></span>
-            <h3>Software a la medida</h3>
-            <p>Inventarios, facturación, citas o CRM, hechos para cómo trabaja tu equipo.</p>
-          </article>
-
-          <article class="card cell cell--auto reveal" style="--i:3">
-            <span class="cell__icon"><i class="ph ph-plugs-connected" aria-hidden="true"></i></span>
-            <h3>Automatización e integraciones</h3>
-            <p>Conectamos WhatsApp, pagos y facturación electrónica para ahorrarte tareas repetidas.</p>
-          </article>
-
-          <article class="card cell cell--support reveal" style="--i:4">
-            <div class="cell__lead">
-              <span class="cell__icon"><i class="ph ph-headset" aria-hidden="true"></i></span>
-              <h3>Soporte y mantenimiento</h3>
+          <article class="stack__item" style="--i:1">
+            <div class="card stack__card">
+              <div class="stack__body">
+                <span class="icon-box"><i class="ph ph-device-mobile" aria-hidden="true"></i></span>
+                <div class="stack__text">
+                  <h3>Apps móviles</h3>
+                  <p>Apps para Android y iPhone que tus clientes sí van a usar.</p>
+                  <ul class="tags"><li>Android</li><li>iPhone</li><li>App web</li></ul>
+                </div>
+              </div>
+              <div class="stack__media">
+                <img src="https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=1200&h=900&q=72" alt="Mano sosteniendo un celular con una app abierta frente a un escritorio" width="1200" height="900" loading="lazy">
+              </div>
+              <span class="stack__shade" aria-hidden="true"></span>
             </div>
-            <p>Después de la entrega seguimos contigo: actualizaciones, copias de seguridad y ajustes cuando los necesites.</p>
-            <ul class="tags">
-              <li>Hosting</li>
-              <li>Copias de seguridad</li>
-              <li>Capacitación</li>
-            </ul>
+          </article>
+          <article class="stack__item" style="--i:2">
+            <div class="card stack__card">
+              <div class="stack__body">
+                <span class="icon-box"><i class="ph ph-gear-six" aria-hidden="true"></i></span>
+                <div class="stack__text">
+                  <h3>Software a la medida</h3>
+                  <p>Inventarios, facturación, citas o CRM, hechos para cómo trabaja tu equipo.</p>
+                  <ul class="tags"><li>Inventarios</li><li>Facturación</li><li>CRM</li></ul>
+                </div>
+              </div>
+              <div class="stack__media">
+                <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&h=900&q=72" alt="Portátil con código abierto en un editor, sobre fondo oscuro" width="1200" height="900" loading="lazy">
+              </div>
+              <span class="stack__shade" aria-hidden="true"></span>
+            </div>
+          </article>
+          <article class="stack__item stack__item--violet" style="--i:3">
+            <div class="card stack__card">
+              <div class="stack__body">
+                <span class="icon-box"><i class="ph ph-plugs-connected" aria-hidden="true"></i></span>
+                <div class="stack__text">
+                  <h3>Automatización e integraciones</h3>
+                  <p>Conectamos WhatsApp, pagos y facturación electrónica para ahorrarte tareas repetidas.</p>
+                  <ul class="tags"><li>WhatsApp</li><li>Pagos</li><li>Facturación electrónica</li></ul>
+                </div>
+              </div>
+              <div class="stack__media">
+                <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&h=900&q=72" alt="Primer plano de una placa de circuitos con sus conexiones" width="1200" height="900" loading="lazy">
+              </div>
+              <span class="stack__shade" aria-hidden="true"></span>
+            </div>
+          </article>
+          <article class="stack__item" style="--i:4">
+            <div class="card stack__card">
+              <div class="stack__body">
+                <span class="icon-box"><i class="ph ph-headset" aria-hidden="true"></i></span>
+                <div class="stack__text">
+                  <h3>Soporte y mantenimiento</h3>
+                  <p>Después de la entrega seguimos contigo: actualizaciones, copias de seguridad y ajustes cuando los necesites.</p>
+                  <ul class="tags"><li>Hosting</li><li>Copias de seguridad</li><li>Capacitación</li></ul>
+                </div>
+              </div>
+              <div class="stack__media">
+                <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&h=900&q=72" alt="Rack de servidores con cables de red ordenados" width="1200" height="900" loading="lazy">
+              </div>
+              <span class="stack__shade" aria-hidden="true"></span>
+            </div>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- ============ PROYECTOS (pestañas) ============ -->
+    <!-- ============ PROYECTOS (galería que se expande) ============ -->
     <section class="section" id="proyectos" aria-labelledby="proyectos-title">
       <div class="container">
         <header class="section-head reveal">
@@ -308,93 +362,105 @@
           <p>Ejemplos de lo que construimos para comercios, restaurantes y empresas de servicios.</p>
         </header>
 
-        <div class="projects reveal">
-          <div class="projects__tabs" role="tablist" aria-label="Tipos de proyecto">
-            <button class="tab" role="tab" id="tab-tienda" aria-controls="panel-tienda" aria-selected="true">
-              <span class="tab__title">Tienda en línea</span>
-              <span class="tab__meta">Comercio de ropa</span>
+        <!-- Galería que se expande (initCases en js/main.js): el caso activo se
+             abre y muestra su contenido; los demás quedan como franjas con su
+             nombre en vertical. Rota sola mientras se ve (barra cian de
+             progreso), se pausa con el cursor encima y deja de rotar cuando
+             eliges uno. En móvil son franjas horizontales una sobre otra. -->
+        <div class="cases reveal" data-cases>
+          <article class="case is-active" style="--i:0">
+            <img class="case__img" src="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1400&h=1000&q=72" alt="Perchero con prendas en una tienda de ropa con luz cálida" width="1400" height="1000" loading="lazy">
+            <button class="case__trigger" type="button" id="case-tienda-btn" aria-expanded="true" aria-controls="case-tienda">
+              <span class="case__label">
+                <i class="ph ph-t-shirt" aria-hidden="true"></i>
+                <span class="case__name">Tienda en línea</span>
+                <span class="case__meta">Comercio de ropa</span>
+              </span>
             </button>
-            <button class="tab" role="tab" id="tab-pos" aria-controls="panel-pos" aria-selected="false" tabindex="-1">
-              <span class="tab__title">Punto de venta e inventario</span>
-              <span class="tab__meta">Cafetería</span>
-            </button>
-            <button class="tab" role="tab" id="tab-panel" aria-controls="panel-panel" aria-selected="false" tabindex="-1">
-              <span class="tab__title">Panel de indicadores</span>
-              <span class="tab__meta">Distribuidora</span>
-            </button>
-            <button class="tab" role="tab" id="tab-reservas" aria-controls="panel-reservas" aria-selected="false" tabindex="-1">
-              <span class="tab__title">Agenda y reservas</span>
-              <span class="tab__meta">Centro de estética</span>
-            </button>
-          </div>
-
-          <div class="projects__panels">
-            <div class="panel" role="tabpanel" id="panel-tienda" aria-labelledby="tab-tienda" tabindex="0">
-              <div class="panel__media">
-                <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1100&h=700&q=70" alt="Interior de una tienda de ropa con prendas en exhibición" width="1100" height="700" loading="lazy">
-              </div>
-              <div class="panel__text">
+            <div class="case__body" id="case-tienda" role="region" aria-labelledby="case-tienda-btn">
+              <p class="case__chip"><i class="ph ph-t-shirt" aria-hidden="true"></i>Comercio de ropa</p>
+              <div class="case__text">
+                <h3>Tienda en línea</h3>
                 <p>Catálogo, pagos con PSE y tarjeta, y envíos coordinados desde un solo panel. Tu tienda vende incluso cuando el local está cerrado.</p>
                 <ul class="tags"><li>E-commerce</li><li>Pagos en línea</li><li>Inventario</li></ul>
+                <a class="arrow-link case__cta" href="#contacto">
+                  Quiero algo así
+                  <i class="ph ph-arrow-right" aria-hidden="true"></i>
+                </a>
               </div>
             </div>
-
-            <div class="panel" role="tabpanel" id="panel-pos" aria-labelledby="tab-pos" tabindex="0" hidden>
-              <div class="panel__media">
-                <img src="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1100&h=700&q=70" alt="Cajera de una cafetería cobrando con un punto de venta en tablet" width="1100" height="700" loading="lazy">
-              </div>
-              <div class="panel__text">
+            <span class="case__progress" aria-hidden="true"></span>
+          </article>
+          <article class="case" style="--i:1">
+            <img class="case__img" src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1400&h=1000&q=72" alt="Interior de una cafetería con lámparas colgantes y un letrero luminoso" width="1400" height="1000" loading="lazy">
+            <button class="case__trigger" type="button" id="case-pos-btn" aria-expanded="false" aria-controls="case-pos">
+              <span class="case__label">
+                <i class="ph ph-coffee" aria-hidden="true"></i>
+                <span class="case__name">Punto de venta e inventario</span>
+                <span class="case__meta">Cafetería</span>
+              </span>
+            </button>
+            <div class="case__body" id="case-pos" role="region" aria-labelledby="case-pos-btn" inert>
+              <p class="case__chip"><i class="ph ph-coffee" aria-hidden="true"></i>Cafetería</p>
+              <div class="case__text">
+                <h3>Punto de venta e inventario</h3>
                 <p>Ventas, inventario y cierre de caja en una tablet. Sabes qué se vende, qué falta y cuánto entró al final del día.</p>
                 <ul class="tags"><li>Punto de venta</li><li>Inventario</li><li>Reportes</li></ul>
+                <a class="arrow-link case__cta" href="#contacto">
+                  Quiero algo así
+                  <i class="ph ph-arrow-right" aria-hidden="true"></i>
+                </a>
               </div>
             </div>
-
-            <div class="panel" role="tabpanel" id="panel-panel" aria-labelledby="tab-panel" tabindex="0" hidden>
-              <div class="panel__media">
-                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1100&h=700&q=70" alt="Pantalla con gráficas de ventas y métricas del negocio" width="1100" height="700" loading="lazy">
-              </div>
-              <div class="panel__text">
+            <span class="case__progress" aria-hidden="true"></span>
+          </article>
+          <article class="case" style="--i:2">
+            <img class="case__img" src="https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=1400&h=1000&q=72" alt="Pasillo de una bodega con estanterías llenas de mercancía" width="1400" height="1000" loading="lazy">
+            <button class="case__trigger" type="button" id="case-panel-btn" aria-expanded="false" aria-controls="case-panel">
+              <span class="case__label">
+                <i class="ph ph-truck" aria-hidden="true"></i>
+                <span class="case__name">Panel de indicadores</span>
+                <span class="case__meta">Distribuidora</span>
+              </span>
+            </button>
+            <div class="case__body" id="case-panel" role="region" aria-labelledby="case-panel-btn" inert>
+              <p class="case__chip"><i class="ph ph-truck" aria-hidden="true"></i>Distribuidora</p>
+              <div class="case__text">
+                <h3>Panel de indicadores</h3>
                 <p>Tus ventas, gastos y clientes en un tablero que se entiende. Decisiones con datos, sin armar hojas de cálculo cada semana.</p>
                 <ul class="tags"><li>Tableros</li><li>Integraciones</li><li>Automatización</li></ul>
+                <a class="arrow-link case__cta" href="#contacto">
+                  Quiero algo así
+                  <i class="ph ph-arrow-right" aria-hidden="true"></i>
+                </a>
               </div>
             </div>
-
-            <div class="panel" role="tabpanel" id="panel-reservas" aria-labelledby="tab-reservas" tabindex="0" hidden>
-              <div class="panel__media">
-                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1100&h=700&q=70" alt="Clientas revisando una agenda de citas en el portátil" width="1100" height="700" loading="lazy">
-              </div>
-              <div class="panel__text">
+            <span class="case__progress" aria-hidden="true"></span>
+          </article>
+          <article class="case" style="--i:3">
+            <img class="case__img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1400&h=1000&q=72" alt="Salón de belleza con sillas y espejos frente a ventanales" width="1400" height="1000" loading="lazy">
+            <button class="case__trigger" type="button" id="case-reservas-btn" aria-expanded="false" aria-controls="case-reservas">
+              <span class="case__label">
+                <i class="ph ph-calendar-check" aria-hidden="true"></i>
+                <span class="case__name">Agenda y reservas</span>
+                <span class="case__meta">Centro de estética</span>
+              </span>
+            </button>
+            <div class="case__body" id="case-reservas" role="region" aria-labelledby="case-reservas-btn" inert>
+              <p class="case__chip"><i class="ph ph-calendar-check" aria-hidden="true"></i>Centro de estética</p>
+              <div class="case__text">
+                <h3>Agenda y reservas</h3>
                 <p>Tus clientes reservan desde el celular y reciben recordatorios por WhatsApp. Menos citas perdidas y una agenda siempre al día.</p>
                 <ul class="tags"><li>App web</li><li>WhatsApp</li><li>Agenda</li></ul>
+                <a class="arrow-link case__cta" href="#contacto">
+                  Quiero algo así
+                  <i class="ph ph-arrow-right" aria-hidden="true"></i>
+                </a>
               </div>
             </div>
-          </div>
+            <span class="case__progress" aria-hidden="true"></span>
+          </article>
         </div>
-      </div>
-    </section>
-
-    <!-- ============ NOSOTROS (banda con imagen) ============ -->
-    <section class="band" id="nosotros" aria-labelledby="nosotros-title">
-      <img class="band__img" src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1800&h=1000&q=70" alt="" width="1800" height="1000" loading="lazy">
-      <div class="container band__content">
-        <h2 id="nosotros-title" class="reveal">Tecnología con acento local</h2>
-        <p class="band__statement reveal" style="--i:1">
-          Somos un equipo colombiano con presencia en <strong>Bogotá, Tocaima y Girardot</strong>. Te explicamos todo en español claro y construimos solo lo que tu negocio necesita.
-        </p>
-        <ul class="values">
-          <li class="reveal" style="--i:2">
-            <h3>Cercanía</h3>
-            <p>Hablas directo con quien desarrolla tu proyecto.</p>
-          </li>
-          <li class="reveal" style="--i:3">
-            <h3>Precisión</h3>
-            <p>Alcance, precio y fechas claros desde el inicio.</p>
-          </li>
-          <li class="reveal" style="--i:4">
-            <h3>Claridad</h3>
-            <p>Sin tecnicismos: entiendes cada decisión.</p>
-          </li>
-        </ul>
       </div>
     </section>
 
@@ -432,12 +498,12 @@
           <div class="faq__item">
             <h3>
               <button class="faq__q" type="button" aria-expanded="false" aria-controls="faq-3" id="faq-3-q">
-                ¿Trabajan solo con negocios de Cundinamarca?
+                ¿Trabajan con negocios de todo el país?
                 <i class="ph ph-plus" aria-hidden="true"></i>
               </button>
             </h3>
             <div class="faq__a" id="faq-3" role="region" aria-labelledby="faq-3-q">
-              <div><p>No. Estamos en Bogotá, Tocaima y Girardot, y trabajamos de forma remota con empresas de todo el país.</p></div>
+              <div><p>Sí. Trabajamos de forma remota con empresas de todo el país.</p></div>
             </div>
           </div>
           <div class="faq__item">
@@ -572,6 +638,14 @@
 
   <!-- ============ FOOTER ============ -->
   <footer class="footer">
+    <!-- Fondo: olas en degradado con los colores de marca (initFooterWaves en
+         js/main.js; adaptación de "Gradient Waves" de React Bits) -->
+    <div class="footer__waves" aria-hidden="true"
+      data-horizon="#5533BD" data-wave="#1D4FB0" data-crest="#00E0EF"
+      data-speed="0.25" data-amplitude="2.5" data-wave-scale="0.6" data-wave-ratio="0.9"
+      data-swell="35" data-turbulence="20" data-tilt="1.11" data-zoom="0.85"
+      data-height="5.5" data-fog-depth="18" data-brightness="1" data-opacity="1"
+      data-parallax="0.5" data-grain="0.04"></div>
     <div class="container footer__top">
       <div class="footer__brand">
         <img src="img/volt-logo.png" alt="VOLT soluciones digitales" width="640" height="201" loading="lazy">
@@ -581,9 +655,9 @@
       <nav class="footer__col" aria-label="Pie de página">
         <h2>Explora</h2>
         <a href="#proceso">Proceso</a>
+        <a href="#beneficios">Beneficios</a>
         <a href="#servicios">Servicios</a>
         <a href="#proyectos">Proyectos</a>
-        <a href="#nosotros">Nosotros</a>
         <a href="#preguntas">Preguntas</a>
       </nav>
 
